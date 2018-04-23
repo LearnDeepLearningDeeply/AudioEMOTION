@@ -1,0 +1,45 @@
+H:\AudioEMOTION\chenhangting\CV\folds\fold1_train.txt
+{'neu': 0.3730034450360163, 'hap': 0.12965862824929533, 'ang': 0.24647666771061696, 'sad': 0.2508612590040714}
+{'neu': 1191, 'hap': 414, 'ang': 787, 'sad': 801}
+H:\AudioEMOTION\chenhangting\CV\folds\fold1_eva.txt
+{'neu': 0.37464788732394366, 'hap': 0.1295774647887324, 'ang': 0.24507042253521127, 'sad': 0.2507042253521127}
+{'neu': 133, 'hap': 46, 'ang': 87, 'sad': 89}
+H:\AudioEMOTION\chenhangting\CV\folds\fold1_test.txt
+{'neu': 0.40764331210191085, 'hap': 0.14331210191082802, 'ang': 0.24309978768577495, 'sad': 0.2059447983014862}
+{'neu': 384, 'hap': 135, 'ang': 229, 'sad': 194}
+H:\AudioEMOTION\chenhangting\CV\folds\fold2_train.txt
+{'neu': 0.36597159262617107, 'hap': 0.12994862496222423, 'ang': 0.2629193109700816, 'sad': 0.2411604714415231}
+{'neu': 1211, 'hap': 430, 'ang': 870, 'sad': 798}
+H:\AudioEMOTION\chenhangting\CV\folds\fold2_eva.txt
+{'neu': 0.36684782608695654, 'hap': 0.13043478260869565, 'ang': 0.2608695652173913, 'sad': 0.2418478260869565}
+{'neu': 135, 'hap': 48, 'ang': 96, 'sad': 89}
+H:\AudioEMOTION\chenhangting\CV\folds\fold2_test.txt
+{'neu': 0.44526445264452646, 'hap': 0.14391143911439114, 'ang': 0.16851168511685116, 'sad': 0.24231242312423124}
+{'neu': 362, 'hap': 117, 'ang': 137, 'sad': 197}
+H:\AudioEMOTION\chenhangting\CV\folds\fold3_train.txt
+{'neu': 0.39764406240050937, 'hap': 0.1318051575931232, 'ang': 0.24737344794651384, 'sad': 0.22317733205985354}
+{'neu': 1249, 'hap': 414, 'ang': 777, 'sad': 701}
+H:\AudioEMOTION\chenhangting\CV\folds\fold3_eva.txt
+{'neu': 0.3982808022922636, 'hap': 0.1318051575931232, 'ang': 0.24641833810888253, 'sad': 0.22349570200573066}
+{'neu': 139, 'hap': 46, 'ang': 86, 'sad': 78}
+H:\AudioEMOTION\chenhangting\CV\folds\fold3_test.txt
+{'neu': 0.32, 'hap': 0.135, 'ang': 0.24, 'sad': 0.305}
+{'neu': 320, 'hap': 135, 'ang': 240, 'sad': 305}
+H:\AudioEMOTION\chenhangting\CV\folds\fold4_train.txt
+{'neu': 0.39224526600541026, 'hap': 0.14337240757439135, 'ang': 0.20979861737300873, 'sad': 0.2545837090471897}
+{'neu': 1305, 'hap': 477, 'ang': 698, 'sad': 847}
+H:\AudioEMOTION\chenhangting\CV\folds\fold4_eva.txt
+{'neu': 0.3918918918918919, 'hap': 0.14324324324324325, 'ang': 0.21081081081081082, 'sad': 0.25405405405405407}
+{'neu': 145, 'hap': 53, 'ang': 78, 'sad': 94}
+H:\AudioEMOTION\chenhangting\CV\folds\fold4_test.txt
+{'neu': 0.3253467843631778, 'hap': 0.08196721311475409, 'ang': 0.4123581336696091, 'sad': 0.18032786885245902}
+{'neu': 258, 'hap': 65, 'ang': 327, 'sad': 143}
+H:\AudioEMOTION\chenhangting\CV\folds\fold5_train.txt
+{'neu': 0.3730034450360163, 'hap': 0.12746633260256812, 'ang': 0.2630754776072659, 'sad': 0.2364547447541497}
+{'neu': 1191, 'hap': 407, 'ang': 840, 'sad': 755}
+H:\AudioEMOTION\chenhangting\CV\folds\fold5_eva.txt
+{'neu': 0.37464788732394366, 'hap': 0.1267605633802817, 'ang': 0.2619718309859155, 'sad': 0.23661971830985915}
+{'neu': 133, 'hap': 45, 'ang': 93, 'sad': 84}
+H:\AudioEMOTION\chenhangting\CV\folds\fold5_test.txt
+{'neu': 0.40764331210191085, 'hap': 0.15180467091295116, 'ang': 0.18046709129511676, 'sad': 0.26008492569002123}
+{'neu': 384, 'hap': 143, 'ang': 170, 'sad': 245}
