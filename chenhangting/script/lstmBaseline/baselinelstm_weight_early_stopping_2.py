@@ -42,6 +42,8 @@ parser.add_argument('--log_interval',type=int,default=1,metavar='N', \
                     help='how many batches to wait before logging (default 10 )')
 parser.add_argument('--device_id',type=int,default=0,metavar='N', \
                     help="the device id")
+parser.add_argument('--savepath',type=str,default='model.pkl',metavar='S', \
+                    help='save model in the path')
 
 
 args=parser.parse_args()
