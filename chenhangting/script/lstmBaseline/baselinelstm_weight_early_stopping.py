@@ -19,7 +19,7 @@ from torch.nn.utils.rnn import pack_padded_sequence,pad_packed_sequence
 import numpy as np
 import sys
 sys.path.append(r'../dataset')
-from dataset1d import AudioFeatureDataset
+from dataset1d_early_stopping import AudioFeatureDataset
 import pdb
 import os
 from sklearn import metrics
