@@ -30,8 +30,8 @@ from sklearn import metrics
 parser=argparse.ArgumentParser(description='PyTorch for audio emotion classification in iemocap')
 parser.add_argument('--cvnum',type=int,default=1,metavar='N', \
                     help='the num of cv set')
-parser.add_argument('--batch_size',type=int,default=16,metavar='N', \
-                    help='input batch size for training ( default 16 )')
+parser.add_argument('--batch_size',type=int,default=256,metavar='N', \
+                    help='input batch size for training ( default 64 )')
 parser.add_argument('--epoch',type=int,default=100,metavar='N', \
                     help='number of epochs to train ( default 100)')
 parser.add_argument('--lr',type=float,default=0.001,metavar='LR', \
@@ -101,10 +101,10 @@ def resize_batch(data,label,length,name):
             data_new=data[inx,0:l,:]
             label_new=label[inx,0:l]
         else:
-            data_new=np.array([data_new,data[inx,0:l,:]])
-            label_new=label([label_new,label[inx,0:l]])
-    data=torch.FloatTensor(data)
-    label=torch.LongTensor(label)
+            data_new=np.concatenate((data_new,data[inx,0:l,:]),axis=0)
+            label_new=np.concatenate((label_new,label[inx,0:l]),axis=0)
+    data=torch.FloatTensor(data_new)
+    label=torch.LongTensor(label_new)
     return (data,label,length,name)
 
 class Net(nn.Module):
@@ -142,7 +142,7 @@ class Net(nn.Module):
             nn.LogSoftmax(dim=1),
         )
 
-    def forward(self,x,batch_size):
+    def forward(self,x):
         out=self.layer1(x)
         out=self.layer2(out)
         out=self.layer3(out)
