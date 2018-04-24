@@ -3,9 +3,9 @@
 @date: Created on 2018/4/23
 @author: chenhangting
 
-@notes: a lstm baseline for iemocap
+@notes: a dnn baseline for iemocap
     add weight to balance classes
-
+    add early stopping support
 """
 
 import argparse
@@ -53,8 +53,6 @@ os.environ["CUDA_VISIBLE_DEVICES"]=str(args.device_id)
 superParams={'input_dim':153,
             'hidden_dim':256,
             'output_dim':4,
-            'num_layers':4,
-            'biFlag':2,
             'dropout':0.25}
 emotion_labels=('neu','hap','ang','sad')
 
@@ -94,17 +92,19 @@ test_loader=torch.utils.data.DataLoader(dataset_test, \
                                 batch_size=args.batch_size,shuffle=False, \
                                 num_workers=4,pin_memory=False)
 
-def sort_batch(data,label,length,name):
-    batch_size=data.size(0)
-#    print(np.argsort(length.numpy())[::-1].copy())
-    inx=torch.from_numpy(np.argsort(length.numpy())[::-1].copy())
-    data=data[inx]
-    label=label[inx]
-    length=length[inx]
-    name_new=[]
-    for i in list(inx.numpy()):name_new.append(name[i])
-    name=name_new
+def resize_batch(data,label,length,name):
+    data=data.numpy();label=label.numpy()
+    data_new=np.array([]);label_new=np.array([])
     length=list(length.numpy())
+    for inx,l in enumerate(length):
+        if(inx==0):
+            data_new=data[inx,0:l,:]
+            label_new=label[inx,0:l]
+        else:
+            data_new=np.array([data_new,data[inx,0:l,:])
+            label_new=label([label_new,label[inx,0:l])
+    data=torch.FloatTensor(data)
+    label=torch.LongTensor(label)
     return (data,label,length,name)
 
 class Net(nn.Module):
@@ -147,22 +147,20 @@ def train(epoch,trainLoader):
     model.train()
     for batch_inx,(data,target,length,name) in enumerate(trainLoader):
         batch_size=data.size(0)
-        max_length=torch.max(length)
-        data=data[:,0:max_length,:];target=target[:,0:max_length]
 
-        (data,target,length,name)=sort_batch(data,target,length,name)
+        (data,target,length,name)=resize_batch(data,target,length,name)
         data,target=data.cuda(),target.cuda()
         data,target=Variable(data),Variable(target)
-        data=pack_padded_sequence(data,length,batch_first=True)
 
         optimizer.zero_grad()
-        output,_=model(data,batch_size)
+        output=model(data)
+        lengthcount=0
         for i in range(batch_size):
-#            print(torch.squeeze(output[i,0:length[i],:]));print(torch.squeeze(target[i,0:length[i]]))
-            label=int(torch.squeeze(target[i,0]).cpu().data)
+            label=int(torch.squeeze(target[lengthcount]).cpu().data)
             weight=(trainLoader.dataset.ingredientWeight)[emotion_labels[label]]
-            if(i==0):loss=F.nll_loss(torch.squeeze(output[i,0:length[i],:]),torch.squeeze(target[i,0:length[i]]))/weight
-            else:loss+=F.nll_loss(torch.squeeze(output[i,0:length[i],:]),torch.squeeze(target[i,0:length[i]]))/weight
+            if(i==0):loss=F.nll_loss(torch.squeeze(output[lengthcount:lengthcount+length[i],:]),torch.squeeze(target[lengthcount:lengthcount+length[i]]))/weight
+            else:loss+=F.nll_loss(torch.squeeze(output[lengthcount:lengthcount+length[i],:]),torch.squeeze(target[lengthcount:lengthcount+length[i]]))/weight
+            lengthcount+=length[i]
         loss.backward()
         optimizer.step()
         if(batch_inx % args.log_interval==0):
@@ -178,21 +176,20 @@ def test(testLoader):
 
     for data,target,length,name in testLoader:
         batch_size=data.size(0)
-        max_length=torch.max(length)
-        data=data[:,0:max_length,:];target=target[:,0:max_length]
 
-        (data,target,length,name)=sort_batch(data,target,length,name)
+        (data,target,length,name)=resize_batch(data,target,length,name)
         data,target=data.cuda(),target.cuda()
         data,target=Variable(data,volatile=True),Variable(target,volatile=True)
-        data=pack_padded_sequence(data,length,batch_first=True)
 
-        output,_=model(data,batch_size)
+        output=model(data)
+        lengthcount=0
         for i in range(batch_size):
-            result=(torch.squeeze(output[i,0:length[i],:]).cpu().data.numpy()).sum(axis=0)
+            result=(torch.squeeze(output[lengthcount:lengthcount+length[i],:]).cpu().data.numpy()).sum(axis=0)
             test_dict1[name[i]]=result
-            test_dict2[name[i]]=target.cpu().data[i][0]
-            test_loss+=F.nll_loss(torch.squeeze(output[i,0:length[i],:]),torch.squeeze(target[i,0:length[i]]),size_average=False).data[0]
+            test_dict2[name[i]]=target.cpu().data[lengthcount]
+            test_loss+=F.nll_loss(torch.squeeze(output[lengthcount:lengthcount+length[i],:]),torch.squeeze(target[lengthcount:lengthcount+length[i]]),size_average=False).data[0]
             numframes+=length[i]
+            lengthcount+=length[i]
     if(len(test_dict1)!=len(testLoader.dataset)):
         sys.exit("some test samples are missing")
 
