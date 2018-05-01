@@ -208,7 +208,7 @@ def test(testLoader):
 #        print(np.argmax(result)==test_dict2[filename])
         label_true.append(test_dict2[filename]);label_pred.append(np.argmax(result))
     print('\nTest set: Average loss: {:.4f}, Accuracy: {}/{} ({:.2f}%)\n'.format(
-        test_loss/numframes, metrics.accuracy_score(label_true,label_pred,normalize=False), \
+        test_loss/float(numframes), metrics.accuracy_score(label_true,label_pred,normalize=False), \
         len(test_dict1),metrics.accuracy_score(label_true,label_pred)))
     print(metrics.confusion_matrix(label_true,label_pred))
     print("macro f-score %f"%metrics.f1_score(label_true,label_pred,average="macro"))
