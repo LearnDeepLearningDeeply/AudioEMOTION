@@ -54,6 +54,8 @@ class AudioFeatureDataset(Dataset):
                 temparray=np.load(os.path.join(self.__pathfeatrootdir,filename))
             else:
                 sys.exit("Unsupported data type %s"%self.__feattype)
+            if(np.any(np.isnan(temparray)) or np.any(np.isinf(temparray))):
+                sys.exit("unexpected value of nan or inf in %s"%(filename,))
             frames+=temparray.shape[0]
             if(self.maxframes<temparray.shape[0]):self.maxframes=temparray.shape[0]
             self.__mean+=temparray.sum(axis=0)
