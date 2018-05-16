@@ -69,6 +69,7 @@ attentionParams={
                 'da':128,
                 'r':30,
 }
+penaltyWeight=1e-4
 args.cuda=torch.cuda.is_available()
 if(args.cuda==False):sys.exit("GPU is not available")
 torch.manual_seed(args.seed);torch.cuda.manual_seed(args.seed)
@@ -203,7 +204,7 @@ class Net(nn.Module):
         out_final=out_final.view(batch_size,-1)
         out_final=self.layer2(out_final)
 
-        penalty=torch.sum(torch.sum(torch.pow(torch.bmm(weight,torch.transpose(weight,1,2))-oneMat,2.0),0),0)
+        penalty=torch.sum(torch.sum(torch.sum(torch.pow(torch.bmm(weight,torch.transpose(weight,1,2))-oneMat,2.0),0),0),0)
         return out_final,length,penalty
 
 model=Net(**superParams)
@@ -228,10 +229,9 @@ def train(epoch,trainLoader):
         output,_,penalty=model(data,length,attentionParams['r'])
         numframes=0 
 #            label=int(torch.squeeze(target[i,0]).item())
-        loss=F.nll_loss(output,target,weight=emotionLabelWeight,size_average=False)+penalty
+        loss=F.nll_loss(output,target,weight=emotionLabelWeight,size_average=False)+penaltyWeight*penalty
 #        numframes+=length[i]
         loss.backward()
-        print(penalty)
         
         weight_loss=0.0;grad_total=0.0;param_num=0
         for group in optimizer.param_groups:
@@ -269,7 +269,7 @@ def test(testLoader):
         data,target=Variable(data,volatile=True),Variable(target,volatile=True)
 
         with torch.no_grad():output,_,penalty=model(data,length,attentionParams['r'])
-        test_loss=F.nll_loss(output,target,size_average=False).item()+penalty.item()
+        test_loss=F.nll_loss(output,target,size_average=False).item()+penaltyWeight*penalty.item()
         for i in range(batch_size):
             result=torch.squeeze(output[i,:]).cpu().data.numpy()
             test_dict1[name[i]]=result
