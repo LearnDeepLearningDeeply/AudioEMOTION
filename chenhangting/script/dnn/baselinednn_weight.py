@@ -13,6 +13,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
+from torch.optim import lr_scheduler
 from torchvision import datasets, transforms
 from torch.autograd import Variable
 from torch.nn.utils.rnn import pack_padded_sequence,pad_packed_sequence
@@ -150,12 +151,17 @@ class Net(nn.Module):
         out=self.layer5(out)
         return out
 
+ingredientWeight=train_loader.dataset.ingredientWeight
+emotionLabelWeight=[ 1.0/ingredientWeight[k] for k in emotion_labels ]
+emotionLabelWeight=torch.FloatTensor(emotionLabelWeight).cuda()
+
 model=Net(**superParams)
 model.cuda()
 optimizer=optim.Adam(model.parameters(),lr=args.lr,weight_decay=0.0001)
+exp_lr_scheduler = lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.1)
 
 def train(epoch,trainLoader):
-    model.train()
+    model.train();exp_lr_scheduler.step()
     for batch_inx,(data,target,length,name) in enumerate(trainLoader):
         batch_size=data.size(0)
 
@@ -169,15 +175,28 @@ def train(epoch,trainLoader):
         for i in range(batch_size):
             label=int(torch.squeeze(target[lengthcount]).cpu().data)
             weight=(trainLoader.dataset.ingredientWeight)[emotion_labels[label]]
-            if(i==0):loss=F.nll_loss(torch.squeeze(output[lengthcount:lengthcount+length[i],:]),torch.squeeze(target[lengthcount:lengthcount+length[i]]))/weight
-            else:loss+=F.nll_loss(torch.squeeze(output[lengthcount:lengthcount+length[i],:]),torch.squeeze(target[lengthcount:lengthcount+length[i]]))/weight
+            if(i==0):loss=F.nll_loss(torch.squeeze(output[lengthcount:lengthcount+length[i],:]),torch.squeeze(target[lengthcount:lengthcount+length[i]]),weight=emotionLabelWeight,size_average=False)
+            else:loss+=F.nll_loss(torch.squeeze(output[lengthcount:lengthcount+length[i],:]),torch.squeeze(target[lengthcount:lengthcount+length[i]]),weight=emotionLabelWeight,size_average=False)
             lengthcount+=length[i]
         loss.backward()
+
+        weight_loss=0.0;grad_total=0.0;param_num=0
+        for group in optimizer.param_groups:
+            if(group['weight_decay']!=0):
+                for p in group['params']:
+                    if(p.grad is None):continue
+                    w1=p.grad.data.cpu().numpy()
+                    w2=p.data.cpu().numpy()
+                    if(len(w1.shape)>2 or len(w1.shape)==1):w1=w1.reshape(w1.shape[0],-1)
+                    if(len(w2.shape)>2 or len(w2.shape)==1):w2=w2.reshape(w2.shape[0],-1)
+                    if(len(w1.shape)==1):param_num+=w1.shape[0]
+                    else:param_num+=w1.shape[0]*w1.shape[1]
+                    weight_loss+=group['weight_decay']*np.linalg.norm(w2,ord='fro')
+                    grad_total+=np.linalg.norm(w1,ord='fro')
+        
         optimizer.step()
-        if(batch_inx % args.log_interval==0):
-            print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(
-                epoch, batch_inx * batch_size, len(trainLoader.dataset),
-                100. * batch_inx / len(trainLoader), loss.data[0]))
+        print('Train Epoch: {} [{}/{} ({:.0f}%)]\tAve loss: {:.6f} and Total weight loss {:.6f} and Total grad fro-norm {:.6f}'.format(epoch, batch_inx * batch_size, len(trainLoader.dataset),
+        100. * batch_inx / len(trainLoader), loss.item(),weight_loss,grad_total))
 
 
 def test(testLoader):
@@ -198,7 +217,7 @@ def test(testLoader):
             result=(torch.squeeze(output[lengthcount:lengthcount+length[i],:]).cpu().data.numpy()).sum(axis=0)
             test_dict1[name[i]]=result
             test_dict2[name[i]]=target.cpu().data[lengthcount]
-            test_loss+=F.nll_loss(torch.squeeze(output[lengthcount:lengthcount+length[i],:]),torch.squeeze(target[lengthcount:lengthcount+length[i]]),size_average=False).data[0]
+            test_loss+=F.nll_loss(torch.squeeze(output[lengthcount:lengthcount+length[i],:]),torch.squeeze(target[lengthcount:lengthcount+length[i]]),size_average=False).item()
             numframes+=length[i]
             lengthcount+=length[i]
     if(len(test_dict1)!=len(testLoader.dataset)):
