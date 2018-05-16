@@ -26,6 +26,8 @@ for i in range(num_folds):
 acc=np.array(acc)
 fscore=np.array(fscore)
 if(len(acc)==num_folds and len(fscore)==num_folds):
+    print('acc:');print(acc);
+    print('fscore:');print(fscore)
     print("Average acc {:.03f}-+{:.03f}".format(np.mean(acc),np.std(acc,ddof=1)))
     print("Average marco f-score {:.03f}-+{:.03f}".format(np.mean(fscore),np.std(fscore,ddof=1)))
 else:
