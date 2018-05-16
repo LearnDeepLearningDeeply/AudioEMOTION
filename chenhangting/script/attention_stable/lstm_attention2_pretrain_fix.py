@@ -35,8 +35,8 @@ from sklearn import metrics
 parser=argparse.ArgumentParser(description='PyTorch for audio emotion classification in IEMOCAP')
 parser.add_argument('--cvnum',type=int,default=1,metavar='N', \
                     help='the num of cv set')
-parser.add_argument('--batch_size',type=int,default=16,metavar='N', \
-                    help='input batch size for training ( default 16 )')
+parser.add_argument('--batch_size',type=int,default=64,metavar='N', \
+                    help='input batch size for training ( default 64 )')
 parser.add_argument('--epoch',type=int,default=150,metavar='N', \
                     help='number of epochs to train ( default 150)')
 parser.add_argument('--lr',type=float,default=0.001,metavar='LR', \
@@ -45,7 +45,7 @@ parser.add_argument('--seed',type=int,default=1,metavar='S', \
                     help='random seed ( default 1 )')
 parser.add_argument('--log_interval',type=int,default=1,metavar='N', \
                     help='how many batches to wait before logging (default 10 )')
-parser.add_argument('--device_id',type=int,default=0,metavar='N', \
+parser.add_argument('--device_id',type=int,default=1,metavar='N', \
                     help="the device id")
 parser.add_argument('--savepath',type=str,default='./model.pkl',metavar='S', \
                     help='save model in the path')
@@ -63,8 +63,11 @@ superParams={'input_dim':153,
             'output_dim':len(emotion_labels),
             'num_layers':4,
             'biFlag':2,
-            'dropout':0}
-
+            'dropout':0,}
+attentionParams={
+                'da':128,
+                'r':30,
+}
 args.cuda=torch.cuda.is_available()
 if(args.cuda==False):sys.exit("GPU is not available")
 torch.manual_seed(args.seed);torch.cuda.manual_seed(args.seed)
@@ -195,14 +198,14 @@ class Net(nn.Module):
         for inx,l in enumerate(length):weight[inx,0:l,:]=F.softmax(potential[inx,0:l,:],dim=0)
         weight=torch.transpose(weight,1,2)
         out_final=torch.bmm(weight,out)
-        out_final=outfinal.view(batch_size,-1)
+        out_final=out_final.view(batch_size,-1)
         out_final=self.layer2(out_final)
         return out_final,length
 
 model=Net(**superParams)
 model.cuda()
 model.load_state_dict(torch.load(args.loadpath))
-model.fixlstm()
+model.fixlstm(**attentionParams)
 optimizer=optim.Adam(filter(lambda p:p.requires_grad,model.parameters()),lr=args.lr,weight_decay=0.1)
 exp_lr_scheduler = lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.1)
 
@@ -218,7 +221,7 @@ def train(epoch,trainLoader):
         data,target=Variable(data),Variable(target)
 
         optimizer.zero_grad()
-        output,_=model(data,length)
+        output,_=model(data,length,attentionParams['r'])
         numframes=0 
 #            label=int(torch.squeeze(target[i,0]).item())
         loss=F.nll_loss(output,target,weight=emotionLabelWeight,size_average=False)
@@ -260,7 +263,7 @@ def test(testLoader):
         data,target=data.cuda(),target.cuda()
         data,target=Variable(data,volatile=True),Variable(target,volatile=True)
 
-        with torch.no_grad():output,_=model(data,length)
+        with torch.no_grad():output,_=model(data,length,attentionParams['r'])
         test_loss=F.nll_loss(output,target,size_average=False).item()
         for i in range(batch_size):
             result=torch.squeeze(output[i,:]).cpu().data.numpy()
