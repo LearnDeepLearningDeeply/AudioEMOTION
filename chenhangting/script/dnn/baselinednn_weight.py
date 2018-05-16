@@ -157,7 +157,7 @@ emotionLabelWeight=torch.FloatTensor(emotionLabelWeight).cuda()
 
 model=Net(**superParams)
 model.cuda()
-optimizer=optim.Adam(model.parameters(),lr=args.lr,weight_decay=0.0001)
+optimizer=optim.Adam(model.parameters(),lr=args.lr,weight_decay=0.01)
 exp_lr_scheduler = lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.1)
 
 def train(epoch,trainLoader):
@@ -211,7 +211,7 @@ def test(testLoader):
         data,target=data.cuda(),target.cuda()
         data,target=Variable(data,volatile=True),Variable(target,volatile=True)
 
-        output=model(data)
+        with torch.no_grad():output=model(data)
         lengthcount=0
         for i in range(batch_size):
             result=(torch.squeeze(output[lengthcount:lengthcount+length[i],:]).cpu().data.numpy()).sum(axis=0)
@@ -250,7 +250,7 @@ for epoch in range(1,args.epoch+1):
     train(epoch,train_loader)
     eva_acc,eva_fscore=test(eva_loader)
     eva_fscore_list.append(eva_fscore)
-    if(early_stopping(model,args.savepath,eva_fscore_list,gap=10)):break
+    if(early_stopping(model,args.savepath,eva_fscore_list,gap=15)):break
 
 model.load_state_dict(torch.load(args.savepath))
 model=model.cuda()
