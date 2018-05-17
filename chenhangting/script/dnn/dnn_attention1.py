@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-@date: Created on 2018/4/23
+@date: Created on 2018/5/17
 @author: chenhangting
 
 @notes: a attention-dnn for iemocap
@@ -55,8 +55,12 @@ os.environ["CUDA_VISIBLE_DEVICES"]=str(args.device_id)
 superParams={'input_dim':153,
             'hidden_dim':256,
             'output_dim':4,
-            'dropout':0.25}
-penaltyWeight=1.0
+            'dropout':0.25,
+            'da':128,
+            'r':4,
+            }
+
+penaltyWeight=0.01
 emotion_labels=('neu','hap','ang','sad')
 
 args.cuda=torch.cuda.is_available()
@@ -102,10 +106,10 @@ def resize_batch(data,label,length,name):
     for inx,l in enumerate(length):
         if(inx==0):
             data_new=data[inx,0:l,:]
-            label_new=label[inx,0:l]
+            label_new=np.array([label[inx],])
         else:
             data_new=np.concatenate((data_new,data[inx,0:l,:]),axis=0)
-            label_new=np.concatenate((label_new,label[inx,0:l]),axis=0)
+            label_new=np.append(label_new,label[inx])
     data=torch.FloatTensor(data_new)
     label=torch.LongTensor(label_new)
     return (data,label,length,name)
@@ -144,7 +148,7 @@ class Net(nn.Module):
             nn.Dropout(p=dropout)
         )
         self.layerOut=nn.Sequential(
-            nn.Linear(self.hidden_dim,self.output_dim),
+            nn.Linear(self.hidden_dim*self.r,self.output_dim),
             nn.LogSoftmax(dim=1),
         )
 
@@ -156,11 +160,10 @@ class Net(nn.Module):
 
     def forward(self,x,length):
         # some params to store attention
-        length=list(length.numpy())
         batch_size=len(length)
         one=torch.ones(self.r,self.r,device=self.device)
-        out_final=torch.zeros(batch_size,self.r*self.hidden_dim,device=self.device,requires_grad=True)
-        penalty_mat=torch.zeros(batch_size,self.r,self.r,device=self.device,requires_grad=True)
+        out_final=torch.zeros(batch_size,self.r*self.hidden_dim,device=self.device,requires_grad=False)
+        penalty_mat=torch.zeros(batch_size,self.r,self.r,device=self.device,requires_grad=False)
 
         # feed forward until the last layer
         out=self.layer1(x)
@@ -174,12 +177,12 @@ class Net(nn.Module):
         for idx,l in enumerate(length):
             A_idx_softmax=F.softmax(A[pos:pos+l,:],dim=0)
             A_idx_softmax=torch.transpose(A_idx_softmax,0,1)
-            penalty_mat[idx,:,:]=torch.pow(torch.mulmat(A_idx_softmax,torch.tranpose(A_idx_softmax,0,1))-one,2.0)
-            out_final[idx,:]=torch.mulmat(A_idx_softmax,out[pos:pos+l,:]).view(-1)
+            penalty_mat[idx,:,:]=torch.pow(torch.matmul(A_idx_softmax,torch.transpose(A_idx_softmax,0,1))-one,2.0)
+            out_final[idx,:]=torch.matmul(A_idx_softmax,out[pos:pos+l,:]).view(-1)
             pos+=l
         penalty=reduce(torch.sum,[penalty_mat,0,0,0])
 
-        
+        out_final=self.layerOut(out_final) 
         return out_final,penalty
 
 ingredientWeight=train_loader.dataset.ingredientWeight
@@ -274,7 +277,7 @@ for epoch in range(1,args.epoch+1):
     train(epoch,train_loader)
     eva_acc,eva_fscore=test(eva_loader)
     eva_fscore_list.append(eva_fscore)
-    if(early_stopping(model,args.savepath,eva_fscore_list,gap=15)):break
+    if(early_stopping(model,args.savepath,eva_fscore_list,gap=6)):break
 
 model.load_state_dict(torch.load(args.savepath))
 model=model.cuda()
