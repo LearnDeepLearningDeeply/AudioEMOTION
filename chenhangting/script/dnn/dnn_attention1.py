@@ -1,12 +1,11 @@
 # -*- coding: utf-8 -*-
 """
-@date: Created on 2018/5/17
+@date: Created on 2018/4/23
 @author: chenhangting
 
-@notes: a dnn for iemocap
+@notes: a attention-dnn for iemocap
     add weight to balance classes
     add early stopping support
-    TODO add self attention for model long time info
 """
 
 import argparse
@@ -21,9 +20,10 @@ from torch.nn.utils.rnn import pack_padded_sequence,pad_packed_sequence
 import numpy as np
 import sys
 sys.path.append(r'../dataset')
-from dataset1d_early_stopping import AudioFeatureDataset
+from dataset1d_early_stopping_single_label import AudioFeatureDataset
 import pdb
 import os
+from functools import reduce
 from sklearn import metrics
 
 
@@ -56,6 +56,7 @@ superParams={'input_dim':153,
             'hidden_dim':256,
             'output_dim':4,
             'dropout':0.25}
+penaltyWeight=1.0
 emotion_labels=('neu','hap','ang','sad')
 
 args.cuda=torch.cuda.is_available()
@@ -110,12 +111,15 @@ def resize_batch(data,label,length,name):
     return (data,label,length,name)
 
 class Net(nn.Module):
-    def __init__(self,input_dim,hidden_dim,output_dim,dropout=0.5):
+    def __init__(self,input_dim,hidden_dim,output_dim,da,r,dropout=0.5):
         #dropout
         super(Net,self).__init__()
         self.input_dim=input_dim
         self.hidden_dim=hidden_dim
         self.output_dim=output_dim
+        self.da=da
+        self.r=r
+        self.device=torch.device('cuda')
 
         self.layer1=nn.Sequential(
             nn.Linear(self.input_dim,self.hidden_dim),
@@ -139,18 +143,44 @@ class Net(nn.Module):
             nn.ReLU(),
             nn.Dropout(p=dropout)
         )
-        self.layer5=nn.Sequential(
+        self.layerOut=nn.Sequential(
             nn.Linear(self.hidden_dim,self.output_dim),
             nn.LogSoftmax(dim=1),
         )
 
-    def forward(self,x):
+        self.attention1=nn.Sequential(
+            nn.Linear(self.hidden_dim,self.da,bias=False),
+            nn.Tanh(),
+            nn.Linear(self.da,self.r,bias=False),
+        )
+
+    def forward(self,x,length):
+        # some params to store attention
+        length=list(length.numpy())
+        batch_size=len(length)
+        one=torch.ones(self.r,self.r,device=self.device)
+        out_final=torch.zeros(batch_size,self.r*self.hidden_dim,device=self.device,requires_grad=True)
+        penalty_mat=torch.zeros(batch_size,self.r,self.r,device=self.device,requires_grad=True)
+
+        # feed forward until the last layer
         out=self.layer1(x)
         out=self.layer2(out)
         out=self.layer3(out)
         out=self.layer4(out)
-        out=self.layer5(out)
-        return out
+
+        # attention steps
+        A=self.attention1(out)
+        pos=0
+        for idx,l in enumerate(length):
+            A_idx_softmax=F.softmax(A[pos:pos+l,:],dim=0)
+            A_idx_softmax=torch.transpose(A_idx_softmax,0,1)
+            penalty_mat[idx,:,:]=torch.pow(torch.mulmat(A_idx_softmax,torch.tranpose(A_idx_softmax,0,1))-one,2.0)
+            out_final[idx,:]=torch.mulmat(A_idx_softmax,out[pos:pos+l,:]).view(-1)
+            pos+=l
+        penalty=reduce(torch.sum,[penalty_mat,0,0,0])
+
+        
+        return out_final,penalty
 
 ingredientWeight=train_loader.dataset.ingredientWeight
 emotionLabelWeight=[ 1.0/ingredientWeight[k] for k in emotion_labels ]
@@ -158,7 +188,7 @@ emotionLabelWeight=torch.FloatTensor(emotionLabelWeight).cuda()
 
 model=Net(**superParams)
 model.cuda()
-optimizer=optim.Adam(model.parameters(),lr=args.lr,weight_decay=0.01)
+optimizer=optim.Adam(model.parameters(),lr=args.lr,weight_decay=0.0001)
 exp_lr_scheduler = lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.1)
 
 def train(epoch,trainLoader):
@@ -171,14 +201,9 @@ def train(epoch,trainLoader):
         data,target=Variable(data),Variable(target)
 
         optimizer.zero_grad()
-        output=model(data)
-        lengthcount=0
-        for i in range(batch_size):
-            label=int(torch.squeeze(target[lengthcount]).cpu().data)
-            weight=(trainLoader.dataset.ingredientWeight)[emotion_labels[label]]
-            if(i==0):loss=F.nll_loss(torch.squeeze(output[lengthcount:lengthcount+length[i],:]),torch.squeeze(target[lengthcount:lengthcount+length[i]]),weight=emotionLabelWeight,size_average=False)
-            else:loss+=F.nll_loss(torch.squeeze(output[lengthcount:lengthcount+length[i],:]),torch.squeeze(target[lengthcount:lengthcount+length[i]]),weight=emotionLabelWeight,size_average=False)
-            lengthcount+=length[i]
+        output,penalty=model(data,length)
+
+        loss=F.nll_loss(output,target,weight=emotionLabelWeight,size_average=False)+penaltyWeight*penalty
         loss.backward()
 
         weight_loss=0.0;grad_total=0.0;param_num=0
@@ -196,8 +221,8 @@ def train(epoch,trainLoader):
                     grad_total+=np.linalg.norm(w1,ord='fro')
         
         optimizer.step()
-        print('Train Epoch: {} [{}/{} ({:.0f}%)]\tAve loss: {:.6f} and Total weight loss {:.6f} and Total grad fro-norm {:.6f}'.format(epoch, batch_inx * batch_size, len(trainLoader.dataset),
-        100. * batch_inx / len(trainLoader), loss.item(),weight_loss,grad_total))
+        print('Train Epoch: {} [{}/{} ({:.0f}%)]\tAve loss: {:.6f} and Total weight loss {:.6f} and Total grad fro-norm {:.6f} and penalty {}'.format(epoch, batch_inx * batch_size, len(trainLoader.dataset),
+        100. * batch_inx / len(trainLoader), loss.item(),weight_loss,grad_total,penalty.item()))
 
 
 def test(testLoader):
@@ -212,15 +237,13 @@ def test(testLoader):
         data,target=data.cuda(),target.cuda()
         data,target=Variable(data,volatile=True),Variable(target,volatile=True)
 
-        with torch.no_grad():output=model(data)
-        lengthcount=0
+        with torch.no_grad():output,_=model(data,length)
+        loss=F.nll_loss(output,target,weight=emotionLabelWeight,size_average=False)
         for i in range(batch_size):
-            result=(torch.squeeze(output[lengthcount:lengthcount+length[i],:]).cpu().data.numpy()).sum(axis=0)
+            result=output[i,:].cpu().data.numpy()
             test_dict1[name[i]]=result
-            test_dict2[name[i]]=target.cpu().data[lengthcount]
-            test_loss+=F.nll_loss(torch.squeeze(output[lengthcount:lengthcount+length[i],:]),torch.squeeze(target[lengthcount:lengthcount+length[i]]),size_average=False).item()
+            test_dict2[name[i]]=target.cpu().data[i]
             numframes+=length[i]
-            lengthcount+=length[i]
     if(len(test_dict1)!=len(testLoader.dataset)):
         sys.exit("some test samples are missing")
 
