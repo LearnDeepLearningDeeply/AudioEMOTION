@@ -46,6 +46,8 @@ parser.add_argument('--device_id',type=int,default=0,metavar='N', \
                     help="the device id")
 parser.add_argument('--savepath',type=str,default='./model.pkl',metavar='S', \
                     help='save model in the path')
+parser.add_argument('--loadpath',type=str,default='../../temp/dnn/dnn_attention1/model1.pkl',metavar='S', \
+                    help='load model in the path')
 
 
 args=parser.parse_args()
@@ -55,7 +57,7 @@ os.environ["CUDA_VISIBLE_DEVICES"]=str(args.device_id)
 superParams={'input_dim':153,
             'hidden_dim':256,
             'output_dim':4,
-            'dropout':0.25,
+            'dropout':0.0,
             'da':128,
             'r':4,
             }
@@ -147,6 +149,12 @@ class Net(nn.Module):
             nn.ReLU(),
             nn.Dropout(p=dropout)
         )
+        self.layer5=nn.Sequential(
+            nn.Linear(self.hidden_dim,self.output_dim),
+            nn.LogSoftmax(dim=1),
+        )
+    def fix(self):
+        for param in self.parameters():param.requires_grad=False
         self.layerOut=nn.Sequential(
             nn.Linear(self.hidden_dim*self.r,self.output_dim),
             nn.LogSoftmax(dim=1),
@@ -157,6 +165,7 @@ class Net(nn.Module):
             nn.Tanh(),
             nn.Linear(self.da,self.r,bias=False),
         )
+        self.cuda()
 
     def forward(self,x,length):
         # some params to store attention
@@ -191,7 +200,9 @@ emotionLabelWeight=torch.FloatTensor(emotionLabelWeight).cuda()
 
 model=Net(**superParams)
 model.cuda()
-optimizer=optim.Adam(model.parameters(),lr=args.lr,weight_decay=0.0001)
+model.load_state_dict(torch.load(args.loadpath))
+model.fix()
+optimizer=optim.Adam(filter(lambda p:p.requires_grad,model.parameters()),lr=args.lr,weight_decay=0.0001)
 exp_lr_scheduler = lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.1)
 
 def train(epoch,trainLoader):
