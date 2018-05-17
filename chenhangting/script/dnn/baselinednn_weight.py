@@ -175,8 +175,8 @@ def train(epoch,trainLoader):
         for i in range(batch_size):
             label=int(torch.squeeze(target[lengthcount]).cpu().data)
             weight=(trainLoader.dataset.ingredientWeight)[emotion_labels[label]]
-            if(i==0):loss=F.nll_loss(torch.squeeze(output[lengthcount:lengthcount+length[i],:]),torch.squeeze(target[lengthcount:lengthcount+length[i]]),weight=emotionLabelWeight,size_average=True)
-            else:loss+=F.nll_loss(torch.squeeze(output[lengthcount:lengthcount+length[i],:]),torch.squeeze(target[lengthcount:lengthcount+length[i]]),weight=emotionLabelWeight,size_average=True)
+            if(i==0):loss=F.nll_loss(torch.squeeze(output[lengthcount:lengthcount+length[i],:]),torch.squeeze(target[lengthcount:lengthcount+length[i]]),size_average=True)/weight
+            else:loss+=F.nll_loss(torch.squeeze(output[lengthcount:lengthcount+length[i],:]),torch.squeeze(target[lengthcount:lengthcount+length[i]]),size_average=True)/weight
             lengthcount+=length[i]
         loss.backward()
 

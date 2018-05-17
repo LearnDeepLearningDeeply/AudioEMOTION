@@ -7,3 +7,7 @@ log
 # Python:
 __pycache__/
 *.out
+
+# temp script
+parallel.sh
+serial.sh
