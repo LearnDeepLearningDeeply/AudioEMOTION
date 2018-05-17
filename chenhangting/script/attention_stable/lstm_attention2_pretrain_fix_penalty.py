@@ -69,7 +69,7 @@ attentionParams={
                 'da':128,
                 'r':30,
 }
-penaltyWeight=1e-4
+penaltyWeight=1.0
 args.cuda=torch.cuda.is_available()
 if(args.cuda==False):sys.exit("GPU is not available")
 torch.manual_seed(args.seed);torch.cuda.manual_seed(args.seed)
@@ -177,7 +177,7 @@ class Net(nn.Module):
         self.simple_attention=nn.Sequential(
             nn.Linear(self.bi_num*self.hidden_dim,da,bias=False),
             nn.Tanh(),
-            nn.Linear(da,r),
+            nn.Linear(da,r,bias=False),
         )
         self.cuda()
 

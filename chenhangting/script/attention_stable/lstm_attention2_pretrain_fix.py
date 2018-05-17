@@ -175,7 +175,7 @@ class Net(nn.Module):
         self.simple_attention=nn.Sequential(
             nn.Linear(self.bi_num*self.hidden_dim,da,bias=False),
             nn.Tanh(),
-            nn.Linear(da,r),
+            nn.Linear(da,r,bias=False),
         )
         self.cuda()
 

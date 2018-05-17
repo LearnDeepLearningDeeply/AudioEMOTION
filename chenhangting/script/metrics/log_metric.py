@@ -22,6 +22,9 @@ for i in range(num_folds):
             elif(line[0:5]=='macro'):temp_fscore=float(line.split('f-score ')[1])
         acc.append(temp_acc)
         fscore.append(temp_fscore)
+        if(line[0:5]!='macro'):
+            print(line);print(PATHlog)
+            sys.exit("Unexpected line")
 
 acc=np.array(acc)
 fscore=np.array(fscore)

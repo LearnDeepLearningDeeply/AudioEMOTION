@@ -5,7 +5,7 @@ set -e
 PATHPY=./baselinednn_weight.py
 PATHLOGDIR=../../log/dnn/baselinednn_weight
 PATHMODELDIR=../../temp/dnn/baselinednn_weight
-card=0
+card=6
 startfold=1
 foldnum=5
 batch_size=256

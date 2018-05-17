@@ -157,7 +157,7 @@ emotionLabelWeight=torch.FloatTensor(emotionLabelWeight).cuda()
 
 model=Net(**superParams)
 model.cuda()
-optimizer=optim.Adam(model.parameters(),lr=args.lr,weight_decay=0.01)
+optimizer=optim.Adam(model.parameters(),lr=args.lr,weight_decay=0.0001)
 exp_lr_scheduler = lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.1)
 
 def train(epoch,trainLoader):
@@ -175,8 +175,8 @@ def train(epoch,trainLoader):
         for i in range(batch_size):
             label=int(torch.squeeze(target[lengthcount]).cpu().data)
             weight=(trainLoader.dataset.ingredientWeight)[emotion_labels[label]]
-            if(i==0):loss=F.nll_loss(torch.squeeze(output[lengthcount:lengthcount+length[i],:]),torch.squeeze(target[lengthcount:lengthcount+length[i]]),weight=emotionLabelWeight,size_average=False)
-            else:loss+=F.nll_loss(torch.squeeze(output[lengthcount:lengthcount+length[i],:]),torch.squeeze(target[lengthcount:lengthcount+length[i]]),weight=emotionLabelWeight,size_average=False)
+            if(i==0):loss=F.nll_loss(torch.squeeze(output[lengthcount:lengthcount+length[i],:]),torch.squeeze(target[lengthcount:lengthcount+length[i]]),weight=emotionLabelWeight,size_average=True)
+            else:loss+=F.nll_loss(torch.squeeze(output[lengthcount:lengthcount+length[i],:]),torch.squeeze(target[lengthcount:lengthcount+length[i]]),weight=emotionLabelWeight,size_average=True)
             lengthcount+=length[i]
         loss.backward()
 

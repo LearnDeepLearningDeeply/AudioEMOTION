@@ -2,11 +2,12 @@
 
 set -e
 
-PATHPY=./lstm_attention2_pretrain_fix_penalty.py
-PATHLOGDIR=../../log/attention_stable/lstm_attention2_pretrain_fix_penalty
+name=lstm_attention2_pretrain_fix_penalty
+PATHPY=./${name}.py
+PATHLOGDIR=../../log/attention_stable/${name}
 PATHMODELLOADDIR=../../temp/attention_stable/lstm_attention
-PATHMODELSAVEDIR=../../temp/attention_stable/lstm_attention2_pretrain_fix_penalty
-card=2
+PATHMODELSAVEDIR=../../temp/attention_stable/${name}
+card=5
 startfold=1
 foldnum=5
 batch_size=64
