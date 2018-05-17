@@ -9,5 +9,5 @@ __pycache__/
 *.out
 
 # temp script
-parallel.sh
-serial.sh
+parallel*
+serial*
