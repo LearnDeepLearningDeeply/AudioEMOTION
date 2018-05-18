@@ -196,6 +196,7 @@ exp_lr_scheduler = lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.1)
 
 def train(epoch,trainLoader):
     model.train();exp_lr_scheduler.step()
+    train_loss=0.0
     for batch_inx,(data,target,length,name) in enumerate(trainLoader):
         batch_size=data.size(0)
 
@@ -208,6 +209,7 @@ def train(epoch,trainLoader):
 
         loss=F.nll_loss(output,target,weight=emotionLabelWeight,size_average=False)+penaltyWeight*penalty
         loss.backward()
+        train_loss+=loss.item()
 
         weight_loss=0.0;grad_total=0.0;param_num=0
         for group in optimizer.param_groups:
@@ -225,7 +227,8 @@ def train(epoch,trainLoader):
         
         optimizer.step()
         print('Train Epoch: {} [{}/{} ({:.0f}%)]\tAve loss: {:.6f} and Total weight loss {:.6f} and Total grad fro-norm {:.6f} and penalty {}'.format(epoch, batch_inx * batch_size, len(trainLoader.dataset),
-        100. * batch_inx / len(trainLoader), loss.item(),weight_loss,grad_total,penalty.item()))
+        100. * batch_inx / len(trainLoader), loss.item()/len(trainLoader),weight_loss,grad_total,penalty.item()))
+        return train_loss/len(trainLoader.dataset)
 
 
 def test(testLoader):
@@ -241,7 +244,7 @@ def test(testLoader):
         data,target=Variable(data,volatile=True),Variable(target,volatile=True)
 
         with torch.no_grad():output,_=model(data,length)
-        test_loss=F.nll_loss(output,target,weight=emotionLabelWeight,size_average=False)
+        test_loss+=F.nll_loss(output,target,weight=emotionLabelWeight,size_average=False).item()
         for i in range(batch_size):
             result=output[i,:].cpu().data.numpy()
             test_dict1[name[i]]=result
@@ -256,28 +259,33 @@ def test(testLoader):
 #        print(np.argmax(result)==test_dict2[filename])
         label_true.append(test_dict2[filename]);label_pred.append(np.argmax(result))
     print('\nTest set: Average loss: {:.4f}, Accuracy: {}/{} ({:.2f}%)\n'.format(
-        test_loss/float(numframes), metrics.accuracy_score(label_true,label_pred,normalize=False), \
+        test_loss/len(testLoader), metrics.accuracy_score(label_true,label_pred,normalize=False), \
         len(test_dict1),metrics.accuracy_score(label_true,label_pred)))
     print(metrics.confusion_matrix(label_true,label_pred))
     print("macro f-score %f"%metrics.f1_score(label_true,label_pred,average="macro"))
-    return metrics.accuracy_score(label_true,label_pred),metrics.f1_score(label_true,label_pred,average="macro")
+#    return metrics.accuracy_score(label_true,label_pred),metrics.f1_score(label_true,label_pred,average="macro")
+    return test_loss/len(testLoader.dataset)
 
-def early_stopping(network,savepath,metricsInEpochs,gap=10):
-    best_metric_inx=np.argmax(metricsInEpochs)
-    if(best_metric_inx==len(metricsInEpochs)-1):
+def early_stopping(network,savepath,metricsTrain,metricsEva,alpha=3.0):
+    if(len(metricsTrain)!=gap*len(metricsEva)):sys.exit("Error")
+    print(metricsTrain)
+    print(metricsEva)
+    gl=100*(metricsEva[-1]/min(metricsEva)-1)
+    if(gl>0):
+        return True
+    else:
         torch.save(network.state_dict(),savepath)
         return False
-    elif(len(metricsInEpochs)-best_metric_inx >= gap):
-        return True
-    else: 
-        return False
     
-eva_fscore_list=[]
+test_list=[];train_list=[]
 for epoch in range(1,args.epoch+1):
-    train(epoch,train_loader)
-    eva_acc,eva_fscore=test(eva_loader)
-    eva_fscore_list.append(eva_fscore)
-    if(early_stopping(model,args.savepath,eva_fscore_list,gap=3)):break
+    gap=5
+    train_loss=train(epoch,train_loader)
+    train_list.append(train_loss)
+    if(epoch%gap==0):
+        test_loss=test(eva_loader)
+        test_list.append(test_loss)
+        if(early_stopping(model,args.savepath,train_list,test_list)):break
 
 model.load_state_dict(torch.load(args.savepath))
 model=model.cuda()

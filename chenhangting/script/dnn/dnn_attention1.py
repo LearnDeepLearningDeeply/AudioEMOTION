@@ -241,12 +241,11 @@ def test(testLoader):
         data,target=Variable(data,volatile=True),Variable(target,volatile=True)
 
         with torch.no_grad():output,_=model(data,length)
-        test_loss=F.nll_loss(output,target,weight=emotionLabelWeight,size_average=False)
+        test_loss+=F.nll_loss(output,target,weight=emotionLabelWeight,size_average=False).item()
         for i in range(batch_size):
             result=output[i,:].cpu().data.numpy()
             test_dict1[name[i]]=result
             test_dict2[name[i]]=target.cpu().data[i]
-            numframes+=length[i]
     if(len(test_dict1)!=len(testLoader.dataset)):
         sys.exit("some test samples are missing")
 
@@ -256,7 +255,7 @@ def test(testLoader):
 #        print(np.argmax(result)==test_dict2[filename])
         label_true.append(test_dict2[filename]);label_pred.append(np.argmax(result))
     print('\nTest set: Average loss: {:.4f}, Accuracy: {}/{} ({:.2f}%)\n'.format(
-        test_loss/float(numframes), metrics.accuracy_score(label_true,label_pred,normalize=False), \
+        test_loss/len(testLoader), metrics.accuracy_score(label_true,label_pred,normalize=False), \
         len(test_dict1),metrics.accuracy_score(label_true,label_pred)))
     print(metrics.confusion_matrix(label_true,label_pred))
     print("macro f-score %f"%metrics.f1_score(label_true,label_pred,average="macro"))
