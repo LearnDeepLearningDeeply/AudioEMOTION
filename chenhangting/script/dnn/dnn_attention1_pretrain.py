@@ -36,8 +36,8 @@ parser.add_argument('--batch_size',type=int,default=256,metavar='N', \
                     help='input batch size for training ( default 64 )')
 parser.add_argument('--epoch',type=int,default=100,metavar='N', \
                     help='number of epochs to train ( default 100)')
-parser.add_argument('--lr',type=float,default=0.001,metavar='LR', \
-                    help='inital learning rate (default 0.001 )')
+parser.add_argument('--lr',type=float,default=0.0001,metavar='LR', \
+                    help='inital learning rate (default 0.0001 )')
 parser.add_argument('--seed',type=int,default=1,metavar='S', \
                     help='random seed ( default 1 )')
 parser.add_argument('--log_interval',type=int,default=1,metavar='N', \
@@ -46,7 +46,7 @@ parser.add_argument('--device_id',type=int,default=0,metavar='N', \
                     help="the device id")
 parser.add_argument('--savepath',type=str,default='./model.pkl',metavar='S', \
                     help='save model in the path')
-parser.add_argument('--loadpath',type=str,default='../../temp/dnn/dnn_attention1/model1.pkl',metavar='S', \
+parser.add_argument('--loadpath',type=str,default='../../temp/dnn/baselinednn_weight/model1.pkl',metavar='S', \
                     help='load model in the path')
 
 
@@ -155,16 +155,16 @@ class Net(nn.Module):
         )
     def fix(self):
         for param in self.parameters():param.requires_grad=False
-        self.layerOut=nn.Sequential(
+        self.add_module('layerOut',nn.Sequential(
             nn.Linear(self.hidden_dim*self.r,self.output_dim),
             nn.LogSoftmax(dim=1),
-        )
+        ))
 
-        self.attention1=nn.Sequential(
+        self.add_module('attention1',nn.Sequential(
             nn.Linear(self.hidden_dim,self.da,bias=False),
             nn.Tanh(),
             nn.Linear(self.da,self.r,bias=False),
-        )
+        ))
         self.cuda()
 
     def forward(self,x,length):
