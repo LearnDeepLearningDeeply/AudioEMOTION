@@ -35,7 +35,7 @@ lzm的特征，依照文献[1]的描述
 
 
 1. attention1(也就是[1]和[2]中使用的)，效果成谜。至少目前看来没有积极作用
-2. attention3看起来是有效果的，但是我也不确定这个提升是否存在偶然性；attention3在fscore上与 No.7 dnn+IS10相距甚大；attention3的acc表现不错
+2. attention3[3]看起来是有效果的，但是我也不确定这个提升是否存在偶然性；attention3在fscore上与 No.7 dnn+IS10相距甚大；attention3的acc表现不错
 3. No.9[2]，用了简单的attention1，但是acc有63.5%，所以它是怎么做到的
 
 
@@ -44,3 +44,5 @@ lzm的特征，依照文献[1]的描述
 [1] Tao, F. and G. Liu (2017). "Advanced LSTM: A Study about Better Time Dependency Modeling in Emotion Recognition."
 
 [2] Mirsamadi, S., et al. (2017). Automatic speech emotion recognition using recurrent neural networks with local attention. IEEE International Conference on Acoustics, Speech and Signal Processing.
+
+[3] Lin Z, Feng M, Santos C N D, et al. A Structured Self-attentive Sentence Embedding[J]. 2017.
