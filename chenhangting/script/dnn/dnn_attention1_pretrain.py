@@ -32,12 +32,12 @@ from sklearn import metrics
 parser=argparse.ArgumentParser(description='PyTorch for audio emotion classification in iemocap')
 parser.add_argument('--cvnum',type=int,default=1,metavar='N', \
                     help='the num of cv set')
-parser.add_argument('--batch_size',type=int,default=256,metavar='N', \
+parser.add_argument('--batch_size',type=int,default=512,metavar='N', \
                     help='input batch size for training ( default 64 )')
-parser.add_argument('--epoch',type=int,default=100,metavar='N', \
-                    help='number of epochs to train ( default 100)')
-parser.add_argument('--lr',type=float,default=0.0001,metavar='LR', \
-                    help='inital learning rate (default 0.0001 )')
+parser.add_argument('--epoch',type=int,default=50,metavar='N', \
+                    help='number of epochs to train ( default 50)')
+parser.add_argument('--lr',type=float,default=0.001,metavar='LR', \
+                    help='inital learning rate (default 0.001 )')
 parser.add_argument('--seed',type=int,default=1,metavar='S', \
                     help='random seed ( default 1 )')
 parser.add_argument('--log_interval',type=int,default=1,metavar='N', \
@@ -57,12 +57,12 @@ os.environ["CUDA_VISIBLE_DEVICES"]=str(args.device_id)
 superParams={'input_dim':153,
             'hidden_dim':256,
             'output_dim':4,
-            'dropout':0.0,
+            'dropout':0.5,
             'da':128,
-            'r':4,
+            'r':8,
             }
 
-penaltyWeight=0.01
+penaltyWeight=0.0
 emotion_labels=('neu','hap','ang','sad')
 
 args.cuda=torch.cuda.is_available()
@@ -161,9 +161,9 @@ class Net(nn.Module):
         ))
 
         self.add_module('attention1',nn.Sequential(
-            nn.Linear(self.hidden_dim,self.da,bias=False),
-            nn.Tanh(),
-            nn.Linear(self.da,self.r,bias=False),
+#            nn.Linear(self.hidden_dim,self.da,bias=False),
+#            nn.Tanh(),
+            nn.Linear(self.hidden_dim,self.r,bias=False),
         ))
         self.cuda()
 
@@ -202,8 +202,8 @@ model=Net(**superParams)
 model.cuda()
 model.load_state_dict(torch.load(args.loadpath))
 model.fix()
-optimizer=optim.Adam(filter(lambda p:p.requires_grad,model.parameters()),lr=args.lr,weight_decay=0.0001)
-exp_lr_scheduler = lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.1)
+optimizer=optim.Adam(filter(lambda p:p.requires_grad,model.parameters()),lr=args.lr,weight_decay=0.1)
+exp_lr_scheduler = lr_scheduler.StepLR(optimizer, step_size=50, gamma=0.2)
 
 def train(epoch,trainLoader):
     model.train();exp_lr_scheduler.step()
@@ -252,7 +252,7 @@ def test(testLoader):
         data,target=Variable(data,volatile=True),Variable(target,volatile=True)
 
         with torch.no_grad():output,_=model(data,length)
-        test_loss=F.nll_loss(output,target,weight=emotionLabelWeight,size_average=False)
+        test_loss+=F.nll_loss(output,target,weight=emotionLabelWeight,size_average=False).item()
         for i in range(batch_size):
             result=output[i,:].cpu().data.numpy()
             test_dict1[name[i]]=result
@@ -267,14 +267,15 @@ def test(testLoader):
 #        print(np.argmax(result)==test_dict2[filename])
         label_true.append(test_dict2[filename]);label_pred.append(np.argmax(result))
     print('\nTest set: Average loss: {:.4f}, Accuracy: {}/{} ({:.2f}%)\n'.format(
-        test_loss/float(numframes), metrics.accuracy_score(label_true,label_pred,normalize=False), \
+        test_loss/len(testLoader.dataset), metrics.accuracy_score(label_true,label_pred,normalize=False), \
         len(test_dict1),metrics.accuracy_score(label_true,label_pred)))
     print(metrics.confusion_matrix(label_true,label_pred))
     print("macro f-score %f"%metrics.f1_score(label_true,label_pred,average="macro"))
-    return metrics.accuracy_score(label_true,label_pred),metrics.f1_score(label_true,label_pred,average="macro")
+#    return metrics.accuracy_score(label_true,label_pred),metrics.f1_score(label_true,label_pred,average="macro")
+    return test_loss/len(testLoader.dataset)
 
 def early_stopping(network,savepath,metricsInEpochs,gap=10):
-    best_metric_inx=np.argmax(metricsInEpochs)
+    best_metric_inx=np.argmin(metricsInEpochs)
     if(best_metric_inx==len(metricsInEpochs)-1):
         torch.save(network.state_dict(),savepath)
         return False
@@ -286,9 +287,10 @@ def early_stopping(network,savepath,metricsInEpochs,gap=10):
 eva_fscore_list=[]
 for epoch in range(1,args.epoch+1):
     train(epoch,train_loader)
-    eva_acc,eva_fscore=test(eva_loader)
-    eva_fscore_list.append(eva_fscore)
-    if(early_stopping(model,args.savepath,eva_fscore_list,gap=6)):break
+    eva_fscore=test(eva_loader)
+    eva_fscore_list.append(float(int(1e4*eva_fscore))/1e4)
+#    test(test_loader)
+    if(early_stopping(model,args.savepath,eva_fscore_list,gap=5)):break
 
 model.load_state_dict(torch.load(args.savepath))
 model=model.cuda()

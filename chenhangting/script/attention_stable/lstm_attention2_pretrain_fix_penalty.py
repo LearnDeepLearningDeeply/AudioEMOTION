@@ -305,7 +305,7 @@ for epoch in range(1,args.epoch+1):
     train(epoch,train_loader)
     eva_acc,eva_fscore=test(eva_loader)
     eva_fscore_list.append(eva_fscore)
-    if(early_stopping(model,args.savepath,eva_fscore_list,gap=6)):break
+    if(early_stopping(model,args.savepath,eva_fscore_list,gap=15)):break
 
 model.load_state_dict(torch.load(args.savepath))
 model=model.cuda()

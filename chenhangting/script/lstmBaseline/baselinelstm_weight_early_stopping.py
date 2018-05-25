@@ -53,7 +53,7 @@ os.environ["CUDA_VISIBLE_DEVICES"]=str(args.device_id)
 superParams={'input_dim':153,
             'hidden_dim':256,
             'output_dim':4,
-            'num_layers':4,
+            'num_layers':2,
             'biFlag':2,
             'dropout':0.25}
 emotion_labels=('neu','hap','ang','sad')
@@ -223,7 +223,7 @@ for epoch in range(1,args.epoch+1):
     train(epoch,train_loader)
     eva_acc,eva_fscore=test(eva_loader)
     eva_fscore_list.append(eva_fscore)
-    if(early_stopping(model,args.savepath,eva_fscore_list,gap=10)):break
+    if(early_stopping(model,args.savepath,eva_fscore_list,gap=15)):break
 
 model.load_state_dict(torch.load(args.savepath))
 model=model.cuda()

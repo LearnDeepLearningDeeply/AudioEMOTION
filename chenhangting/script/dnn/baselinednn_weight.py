@@ -33,8 +33,8 @@ parser.add_argument('--cvnum',type=int,default=1,metavar='N', \
                     help='the num of cv set')
 parser.add_argument('--batch_size',type=int,default=256,metavar='N', \
                     help='input batch size for training ( default 64 )')
-parser.add_argument('--epoch',type=int,default=100,metavar='N', \
-                    help='number of epochs to train ( default 100)')
+parser.add_argument('--epoch',type=int,default=50,metavar='N', \
+                    help='number of epochs to train ( default 50)')
 parser.add_argument('--lr',type=float,default=0.001,metavar='LR', \
                     help='inital learning rate (default 0.001 )')
 parser.add_argument('--seed',type=int,default=1,metavar='S', \
@@ -214,10 +214,12 @@ def test(testLoader):
         with torch.no_grad():output=model(data)
         lengthcount=0
         for i in range(batch_size):
+            label=int(torch.squeeze(target[lengthcount]).cpu().data)
+            weight=ingredientWeight[emotion_labels[label]]
             result=(torch.squeeze(output[lengthcount:lengthcount+length[i],:]).cpu().data.numpy()).sum(axis=0)
             test_dict1[name[i]]=result
             test_dict2[name[i]]=target.cpu().data[lengthcount]
-            test_loss+=F.nll_loss(torch.squeeze(output[lengthcount:lengthcount+length[i],:]),torch.squeeze(target[lengthcount:lengthcount+length[i]]),size_average=False).item()
+            test_loss+=F.nll_loss(torch.squeeze(output[lengthcount:lengthcount+length[i],:]),torch.squeeze(target[lengthcount:lengthcount+length[i]]),size_average=True).item()/weight
             numframes+=length[i]
             lengthcount+=length[i]
     if(len(test_dict1)!=len(testLoader.dataset)):
@@ -229,14 +231,15 @@ def test(testLoader):
 #        print(np.argmax(result)==test_dict2[filename])
         label_true.append(test_dict2[filename]);label_pred.append(np.argmax(result))
     print('\nTest set: Average loss: {:.4f}, Accuracy: {}/{} ({:.2f}%)\n'.format(
-        test_loss/float(numframes), metrics.accuracy_score(label_true,label_pred,normalize=False), \
+        test_loss/len(testLoader.dataset), metrics.accuracy_score(label_true,label_pred,normalize=False), \
         len(test_dict1),metrics.accuracy_score(label_true,label_pred)))
     print(metrics.confusion_matrix(label_true,label_pred))
     print("macro f-score %f"%metrics.f1_score(label_true,label_pred,average="macro"))
-    return metrics.accuracy_score(label_true,label_pred),metrics.f1_score(label_true,label_pred,average="macro")
+#    return metrics.accuracy_score(label_true,label_pred),metrics.f1_score(label_true,label_pred,average="macro")
+    return test_loss/len(testLoader.dataset)
 
 def early_stopping(network,savepath,metricsInEpochs,gap=10):
-    best_metric_inx=np.argmax(metricsInEpochs)
+    best_metric_inx=np.argmin(metricsInEpochs)
     if(best_metric_inx==len(metricsInEpochs)-1):
         torch.save(network.state_dict(),savepath)
         return False
@@ -248,9 +251,9 @@ def early_stopping(network,savepath,metricsInEpochs,gap=10):
 eva_fscore_list=[]
 for epoch in range(1,args.epoch+1):
     train(epoch,train_loader)
-    eva_acc,eva_fscore=test(eva_loader)
-    eva_fscore_list.append(eva_fscore)
-    if(early_stopping(model,args.savepath,eva_fscore_list,gap=3)):break
+    eva_fscore=test(eva_loader)
+    eva_fscore_list.append(float(int(eva_fscore*1e4))/1e4)
+    if(early_stopping(model,args.savepath,eva_fscore_list,gap=5)):break
 
 model.load_state_dict(torch.load(args.savepath))
 model=model.cuda()

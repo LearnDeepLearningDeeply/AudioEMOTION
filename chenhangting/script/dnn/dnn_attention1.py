@@ -34,8 +34,8 @@ parser.add_argument('--cvnum',type=int,default=1,metavar='N', \
                     help='the num of cv set')
 parser.add_argument('--batch_size',type=int,default=256,metavar='N', \
                     help='input batch size for training ( default 64 )')
-parser.add_argument('--epoch',type=int,default=100,metavar='N', \
-                    help='number of epochs to train ( default 100)')
+parser.add_argument('--epoch',type=int,default=50,metavar='N', \
+                    help='number of epochs to train ( default 50)')
 parser.add_argument('--lr',type=float,default=0.001,metavar='LR', \
                     help='inital learning rate (default 0.001 )')
 parser.add_argument('--seed',type=int,default=1,metavar='S', \
@@ -55,12 +55,12 @@ os.environ["CUDA_VISIBLE_DEVICES"]=str(args.device_id)
 superParams={'input_dim':153,
             'hidden_dim':256,
             'output_dim':4,
-            'dropout':0.25,
+            'dropout':0.5,
             'da':128,
             'r':4,
             }
 
-penaltyWeight=0.01
+penaltyWeight=0.0
 emotion_labels=('neu','hap','ang','sad')
 
 args.cuda=torch.cuda.is_available()
@@ -136,17 +136,17 @@ class Net(nn.Module):
             nn.ReLU(),
             nn.Dropout(p=dropout),
         )
-        self.layer3=nn.Sequential(
-            nn.Linear(self.hidden_dim,self.hidden_dim),
-            nn.BatchNorm1d(self.hidden_dim),
-            nn.ReLU(),
-        )
-        self.layer4=nn.Sequential(
-            nn.Linear(self.hidden_dim,self.hidden_dim),
-            nn.BatchNorm1d(self.hidden_dim),
-            nn.ReLU(),
-            nn.Dropout(p=dropout)
-        )
+#        self.layer3=nn.Sequential(
+#            nn.Linear(self.hidden_dim,self.hidden_dim),
+#            nn.BatchNorm1d(self.hidden_dim),
+#            nn.ReLU(),
+#        )
+#        self.layer4=nn.Sequential(
+#            nn.Linear(self.hidden_dim,self.hidden_dim),
+#            nn.BatchNorm1d(self.hidden_dim),
+#            nn.ReLU(),
+#            nn.Dropout(p=dropout)
+#        )
         self.layerOut=nn.Sequential(
             nn.Linear(self.hidden_dim*self.r,self.output_dim),
             nn.LogSoftmax(dim=1),
@@ -168,8 +168,8 @@ class Net(nn.Module):
         # feed forward until the last layer
         out=self.layer1(x)
         out=self.layer2(out)
-        out=self.layer3(out)
-        out=self.layer4(out)
+#       out=self.layer3(out)
+#        out=self.layer4(out)
 
         # attention steps
         A=self.attention1(out)
@@ -192,7 +192,7 @@ emotionLabelWeight=torch.FloatTensor(emotionLabelWeight).cuda()
 model=Net(**superParams)
 model.cuda()
 optimizer=optim.Adam(model.parameters(),lr=args.lr,weight_decay=0.0001)
-exp_lr_scheduler = lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.1)
+exp_lr_scheduler = lr_scheduler.StepLR(optimizer, step_size=50, gamma=0.1)
 
 def train(epoch,trainLoader):
     model.train();exp_lr_scheduler.step()
@@ -276,7 +276,7 @@ for epoch in range(1,args.epoch+1):
     train(epoch,train_loader)
     eva_acc,eva_fscore=test(eva_loader)
     eva_fscore_list.append(eva_fscore)
-    if(early_stopping(model,args.savepath,eva_fscore_list,gap=3)):break
+    if(early_stopping(model,args.savepath,eva_fscore_list,gap=5)):break
 
 model.load_state_dict(torch.load(args.savepath))
 model=model.cuda()

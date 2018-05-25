@@ -60,9 +60,9 @@ emotion_labels=('neu','hap','ang','sad')
 superParams={'input_dim':153,
             'hidden_dim':256,
             'output_dim':len(emotion_labels),
-            'num_layers':4,
+            'num_layers':2,
             'biFlag':2,
-            'dropout':0}
+            'dropout':0.25}
 
 args.cuda=torch.cuda.is_available()
 if(args.cuda==False):sys.exit("GPU is not available")
@@ -199,8 +199,8 @@ model=Net(**superParams)
 model.cuda()
 model.load_state_dict(torch.load(args.loadpath))
 model.fixlstm()
-optimizer=optim.Adam(filter(lambda p:p.requires_grad,model.parameters()),lr=args.lr,weight_decay=0.1)
-exp_lr_scheduler = lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.1)
+optimizer=optim.Adam(filter(lambda p:p.requires_grad,model.parameters()),lr=args.lr,weight_decay=0.0001)
+exp_lr_scheduler = lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.2)
 
 def train(epoch,trainLoader):
     model.train();exp_lr_scheduler.step()
@@ -293,7 +293,7 @@ for epoch in range(1,args.epoch+1):
     train(epoch,train_loader)
     eva_acc,eva_fscore=test(eva_loader)
     eva_fscore_list.append(eva_fscore)
-    if(early_stopping(model,args.savepath,eva_fscore_list,gap=6)):break
+    if(early_stopping(model,args.savepath,eva_fscore_list,gap=15)):break
 
 model.load_state_dict(torch.load(args.savepath))
 model=model.cuda()

@@ -1,8 +1,11 @@
 # temp:
 temp/
+temp2/
+temp*/
 attention/
 /features/
 log
+log2
 
 # Python:
 __pycache__/
@@ -11,3 +14,7 @@ __pycache__/
 # temp script
 parallel*
 serial*
+
+# CV2
+/CV2/
+/script2/

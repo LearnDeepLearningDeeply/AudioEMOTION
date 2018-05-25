@@ -34,7 +34,7 @@ from sklearn import metrics
 parser=argparse.ArgumentParser(description='PyTorch for audio emotion classification in IEMOCAP')
 parser.add_argument('--cvnum',type=int,default=1,metavar='N', \
                     help='the num of cv set')
-parser.add_argument('--batch_size',type=int,default=16,metavar='N', \
+parser.add_argument('--batch_size',type=int,default=32,metavar='N', \
                     help='input batch size for training ( default 16 )')
 parser.add_argument('--epoch',type=int,default=150,metavar='N', \
                     help='number of epochs to train ( default 150)')
@@ -58,7 +58,7 @@ emotion_labels=('neu','hap','ang','sad')
 superParams={'input_dim':153,
             'hidden_dim':256,
             'output_dim':len(emotion_labels),
-            'num_layers':4,
+            'num_layers':2,
             'biFlag':2,
             'dropout':0.25}
 
@@ -196,11 +196,12 @@ class Net(nn.Module):
 model=Net(**superParams)
 model.cuda()
 model.fixAttention()
-optimizer=optim.Adam(filter(lambda p:p.requires_grad,model.parameters()),lr=args.lr,weight_decay=0.01)
-exp_lr_scheduler = lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.1)
+optimizer=optim.Adam(filter(lambda p:p.requires_grad,model.parameters()),lr=args.lr,weight_decay=0.0001)
+exp_lr_scheduler = lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.2)
 
 def train(epoch,trainLoader):
-    model.train();exp_lr_scheduler.step()
+    model.train()
+    exp_lr_scheduler.step()
     for batch_inx,(data,target,length,name) in enumerate(trainLoader):
         batch_size=data.size(0)
         max_length=torch.max(length)
