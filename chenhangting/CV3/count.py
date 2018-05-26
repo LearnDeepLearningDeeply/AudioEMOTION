@@ -2,7 +2,7 @@ import os
 import csv
 import sys
 
-PATHCVdir=r'H:\AudioEMOTION\chenhangting\CV\folds'
+PATHCVdir=r'H:\AudioEMOTION\chenhangting\CV3\folds'
 
 labels=('neu','hap','ang','sad')
 procedures=('train','eva','test')
