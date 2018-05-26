@@ -58,11 +58,11 @@ os.environ["CUDA_VISIBLE_DEVICES"]=str(args.device_id)
 
 emotion_labels=('neu','hap','ang','sad')
 superParams={'input_dim':36,
-            'hidden_dim':128,
+            'hidden_dim':256,
             'output_dim':len(emotion_labels),
             'num_layers':2,
             'biFlag':2,
-            'da':64,
+            'da':32,
             'r':8,
             'dropout':0.25,
 }
