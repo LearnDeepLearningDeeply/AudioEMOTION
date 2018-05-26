@@ -15,7 +15,7 @@ def confusionMat2numpy(confusionMatS,nr,nc):
     for s in confusionMatS:
         if(s>='0' and s<='9'):temp+=s
         else:
-            if(temp[-1]>='0' and temp[-1]<='9'):confusionMatN.append(int(temp))
+            if(len(temp)>0):confusionMatN.append(int(temp))
             temp=''
     confusionMatN=np.array(confusionMatN).reshape((nr,nc))
     return confusionMatN
@@ -27,8 +27,8 @@ def reconstruct(confusionMat):
     groundTruth=[];pred=[]
     for r in range(nr):
         for c in range(nc):
-            groundTruth.append([r,]*confusionMat[r,c])
-            pred.append([r,]*confusionMat[r,c])
+            groundTruth=groundTruth+[r,]*confusionMat[r,c]
+            pred=pred+[c,]*confusionMat[r,c]
     return groundTruth,pred
 
 
@@ -44,7 +44,7 @@ for i in range(num_folds):
             if(line[0:2]=='[[' or line[0:2]==' ['):confusionMat+=line
             elif(line[0:5]=='macro'):continue
             else:confusionMat=''
-        print("fold{}".format(i))
+        print("fold{}".format(fold))
         print(confusionMat)
         confusionMat=confusionMat2numpy(confusionMat,4,4)
         groundTruth,pred=reconstruct(confusionMat)
@@ -52,6 +52,6 @@ for i in range(num_folds):
         recallList.append(metrics.recall_score(groundTruth,pred,average='macro'))
         accList.append(metrics.accuracy_score(groundTruth,pred,normalize=True))
 
-print('fscore');print(fscoreList);print(np.mean(fscoreList))
-print('recall');print(recallList);print(np.mean(recallList))
-print('acc');print(accList);print(np.mean(accList))
+print('fscore');print(fscoreList);print("%.2f"%(100*np.mean(fscoreList)))
+print('recall');print(recallList);print("%.2f"%(100*np.mean(recallList)))
+print('acc');print(accList);print("%.2f"%(100*np.mean(accList)))
