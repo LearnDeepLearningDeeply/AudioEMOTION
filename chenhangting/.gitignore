@@ -24,8 +24,8 @@ serial*
 /script3/
 
 # some log
-!/log/stable/baselinelstm
-!/log/stable/baselinednn
-!/log/stable/attention1
-!/log/stable/attention2
-!/log/stable/attention3
+!/log/stable/baselinelstm/*
+!/log/stable/baselinednn/*
+!/log/stable/attention1/*
+!/log/stable/attention2/*
+!/log/stable/attention3/*
