@@ -18,6 +18,18 @@ import time
 import progressbar
 from torch.utils.data import Dataset,DataLoader
 
+def npload(filename,feattype):
+    if(feattype=='csv'):
+        temp=np.loadtxt(filename,dtype=np.str,delimiter=';')
+        temp=temp[1,2:].astype(np.float64)
+        return temp
+    elif(feattype=='npy'):
+        return np.load(filename)
+    elif(feattype=='txt' or feattype=='dat'):
+        return np.loadtxt(filename)
+    else:
+        sys.exit("Unsupported data type %s"%feattype)
+
 class AudioFeatureDataset(Dataset):
     def __init__(self,featrootdir,cvtxtrootdir,feattype,cvnum,mode,normflag,normfile):
         self.__pathfeatrootdir=featrootdir
@@ -41,20 +53,14 @@ class AudioFeatureDataset(Dataset):
                     self.__ingredient[row[1]]+=1
                     self.__filedict["{}.{}".format(row[0].rsplit(".",maxsplit=1)[0],self.__feattype)]=self.__class.index(row[1])
                     self.__filelist.append("{}.{}".format(row[0].rsplit(".",maxsplit=1)[0],self.__feattype))
-        if(feattype=='npy'):self.__dim=(np.load(os.path.join(self.__pathfeatrootdir,self.__filelist[0])).shape)[0]
-        elif(feattype=='dat' or self.__feattype=='csv'):self.__dim=(np.loadtxt(os.path.join(self.__pathfeatrootdir,self.__filelist[0])).shape)[0]
+        self.__dim=(npload(os.path.join(self.__pathfeatrootdir,self.__filelist[0]),feattype).shape)[0]
 
         self.__mean=np.zeros((self.__dim,),dtype=np.float64)
         self.__std=np.zeros((self.__dim,),dtype=np.float64)
         p=progressbar.ProgressBar()
         p.start(len(self.__filelist))
         for i,filename in enumerate(self.__filelist):
-            if(self.__feattype=='dat' or self.__feattype=='csv'):
-                temparray=np.loadtxt(os.path.join(self.__pathfeatrootdir,filename))
-            elif(self.__feattype=='npy' ):
-                temparray=np.load(os.path.join(self.__pathfeatrootdir,filename))
-            else:
-                sys.exit("Unsupported data type %s"%self.__feattype)
+            temparray=npload(os.path.join(self.__pathfeatrootdir,filename),feattype)
             if(np.any(np.isnan(temparray)) or np.any(np.isinf(temparray))):
                 sys.exit("unexpected value of nan or inf in %s"%(filename,))
             self.__mean+=temparray
@@ -88,12 +94,8 @@ class AudioFeatureDataset(Dataset):
     
     def __getitem__(self,idx):
         filename=self.__filelist[idx]
-        if(self.__feattype=='dat' or self.__feattype=='csv'):
-            data=np.loadtxt(os.path.join(self.__pathfeatrootdir,filename))
-        elif(self.__feattype=='npy'):
-            data=np.load(os.path.join(self.__pathfeatrootdir,filename))
-        else:
-            sys.exit("Unsupported data type %s"%self.__feattype)
+        data=npload(os.path.join(self.__pathfeatrootdir,filename),self.__feattype)
+
         data=(data-self.__mean)/self.__std
         label=self.__filedict[filename]
 
