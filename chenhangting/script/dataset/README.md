@@ -32,10 +32,11 @@ from dataset1d_longterm import AudioFeatureDataset
 # 加载训练数据
 trainDataset=AudioFeatureDataset(featrootdir=r'../../data/data',cvtxtrootdir=r'../../CV/folds',feattype='csv',cvnum=1,mode='train',normflag=1,normfile='ms1.npy')
 #featrootdir是特征所在的文件夹
+#cvtxtrootdir 交叉验证文件所在的文件夹
 #feattype是特征格式，目前支持'csv','npy'以及'txt';可以在函数npload中自由添加
 #cvnum 折数
 #mode 模式='train','eva','test'
-#normflag =0 依据当前数据集计算mean和std，保存在normfile位置，并且在数据集上做归一化处理；=1 读取保存在normfile位置的归一化文件，并在数据集上做归一化处理；=-1 不做任何归一化，此时normfile参数无效
+#normflag =1 依据当前数据集计算mean和std，保存在normfile位置，并且在数据集上做归一化处理；=0 读取保存在normfile位置的归一化文件，并在数据集上做归一化处理；=-1 不做任何归一化，此时normfile参数无效
 
 # 加载验证数据
 evaDataset=AudioFeatureDataset(featrootdir=r'../../data/data',cvtxtrootdir=r'../../CV/folds',feattype='csv',cvnum=1,mode='eva',normflag=0,normfile='ms1.npy')
