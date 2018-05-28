@@ -14,6 +14,10 @@
 
 ## dataset and split(yyz&cyf)
 
+## short-term feature(lzm)
+
+## long-term feature(yyz&cyf)
+
 ## models's experiment(everyone)
 
 # Results(everyone)
