@@ -60,7 +60,7 @@ def train(epoch,trainLoader):
     for batch_inx,(data,target,name) in enumerate(trainLoader):
         batch_size=data.size(0)
 
-        data,target=data.cuda(),target.cuda()
+        data,target=data.to(device),target.to(device)
         data,target=Variable(data),Variable(target)
 
         optimizer.zero_grad()
@@ -82,7 +82,7 @@ def test(testLoader):
 
     for data,target,name in testLoader:
         batch_size=data.size(0)
-        data,target=data.cuda(),target.cuda()
+        data,target=data.to(device),target.to(device)
         data,target=Variable(data,volatile=True),Variable(target,volatile=True)
 
         output=model(data)
@@ -144,20 +144,17 @@ if __name__=='__main__':
     os.environ["CUDA_VISIBLE_DEVICES"]=str(args.device_id)
 
     superParams={'input_dim':1582,
-                'hidden_dim':256,
+                'hidden_dim':512,
                 'output_dim':4,
-                'dropout':0.25}
+                'dropout':0.5}
     emotion_labels=('neu','hap','ang','sad')
 
-    args.cuda=torch.cuda.is_available()
-    if(args.cuda==False):sys.exit("GPU is not available")
     torch.manual_seed(args.seed);torch.cuda.manual_seed(args.seed)
 
-    featrootdir=r'H:/data/data'
+    featrootdir=r'../../features/IS10'
     cvtxtrootdir='../../CV/folds'
-    normfile=r'temp/ms{}.npy'.format(args.cvnum)
-
-
+    normfile=r'temp4/ms{}.npy'.format(args.cvnum)
+    device=torch.device('cpu')
 
     # load dataset
     dataset_train=AudioFeatureDataset(featrootdir=featrootdir, \
@@ -180,11 +177,11 @@ if __name__=='__main__':
     print("shuffling dataset_train")
     train_loader=torch.utils.data.DataLoader(dataset_train, \
                                     batch_size=args.batch_size,shuffle=False, \
-                                    num_workers=4,pin_memory=True)
+                                    num_workers=4,pin_memory=False)
     print("shuffling dataset_eva")
     eva_loader=torch.utils.data.DataLoader(dataset_eva, \
                                     batch_size=args.batch_size,shuffle=False, \
-                                    num_workers=4,pin_memory=True)
+                                    num_workers=4,pin_memory=False)
 
     print("shuffling dataset_test")
     test_loader=torch.utils.data.DataLoader(dataset_test, \
@@ -193,10 +190,10 @@ if __name__=='__main__':
 
     ingredientWeight=train_loader.dataset.ingredientWeight
     emotionLabelWeight=[ 1.0/ingredientWeight[k] for k in emotion_labels ]
-    emotionLabelWeight=torch.FloatTensor(emotionLabelWeight).cuda()
+    emotionLabelWeight=torch.FloatTensor(emotionLabelWeight).to(device)
 
     model=Net(**superParams)
-    model.cuda()
+    model.to(device)
     optimizer=optim.Adam(model.parameters(),lr=args.lr,weight_decay=0.0001)
 
     eva_fscore_list=[]
@@ -207,5 +204,5 @@ if __name__=='__main__':
         if(early_stopping(model,args.savepath,eva_fscore_list,gap=15)):break
 
     model.load_state_dict(torch.load(args.savepath))
-    model=model.cuda()
+    model=model.to(device)
     test(test_loader)
