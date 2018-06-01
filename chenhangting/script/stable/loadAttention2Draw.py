@@ -123,9 +123,10 @@ def test(testLoader,savefile):
         data,target=Variable(data,volatile=True),Variable(target,volatile=True)
 
         with torch.no_grad():output,_,penalty,attentionWeight=model(data,length,superParams['r'])
-        test_loss=F.nll_loss(output,target,weight=emotionLabelWeight,size_average=False).item()+penaltyWeight*penalty.item()
+        test_loss=F.nll_loss(output,target,weight=emotionLabelWeight,size_average=False).item()+1.0*penalty.item()
         for i in range(batch_size):
-            if(savefile==name[i]):np.save(attentionWeight[i,:,:].cpu().data.numpy(),args.savepath)
+            print(name[i])
+            if(savefile==name[i]):np.save(args.savepath,attentionWeight[i,:,:].cpu().data.numpy())
             result=torch.squeeze(output[i,:]).cpu().data.numpy()
             test_dict1[name[i]]=result
             test_dict2[name[i]]=target.cpu().data[i]
@@ -157,7 +158,7 @@ if __name__=='__main__':
                         help='load the model in the path')
     parser.add_argument('--savepath',type=str,default='draw/unkown.npy',metavar='S', \
                         help='save atttention weight in the path')
-    parser.add_argument('--filename',type=str,default='Ses01F_impro02_F000.npy', \
+    parser.add_argument('--filename',type=str,default='Ses01F_impro02_F000.npy',metavar='S', \
                         help='the file to output attention weight')
 
     args=parser.parse_args()
@@ -182,7 +183,7 @@ if __name__=='__main__':
     # load dataset
     featrootdir=r'/home/liuzongming/feature_alstm_unnorm'
     cvtxtrootdir='../../CV/folds'
-    normfile=r'./temp/ms{}.npy'.format(args.cvnum)
+    normfile=r'./temp1/ms{}.npy'.format(args.cvnum)
 
     dataset_train=AudioFeatureDataset(featrootdir=featrootdir, \
                                         cvtxtrootdir=cvtxtrootdir,feattype='npy', \
