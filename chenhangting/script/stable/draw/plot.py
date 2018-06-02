@@ -14,9 +14,9 @@ p=0.6
 q=1.0
 
 filename=sys.argv[1]
-PATHWAV='./wav/{}.dat'.format(filename)
-PATHWEIGHT='./weight/{}.npy'.format(filename)
-PATHFIG='./fig/{}.jpg'.format(filename)
+PATHWAV='./wav/Ses01M_script01_3_M021.dat'.format(filename)
+PATHWEIGHT='./weight3/{}.npy'.format(filename)
+PATHFIG='./fig3/{}.jpg'.format(filename)
 
 w=np.loadtxt(PATHWAV)
 
