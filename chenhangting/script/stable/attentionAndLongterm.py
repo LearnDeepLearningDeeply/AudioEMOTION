@@ -14,10 +14,12 @@ import torch.optim as optim
 from torchvision import datasets, transforms
 from torch.autograd import Variable
 from torch.nn.utils.rnn import pack_padded_sequence,pad_packed_sequence
+from torch.optim import lr_scheduler
 import numpy as np
 import sys
 sys.path.append(r'../dataset')
 from dataset1d_master import AudioFeatureDataset
+from reverse_seq import reverse_padded_sequence
 import pdb
 import os
 from sklearn import metrics
@@ -36,7 +38,7 @@ def sort_batch(data,label,length,name,dim):
 
 class DNN(nn.Module):
     def __init__(self,input_dim,hidden_dim,output_dim,dropout=0.5):
-        super(Net,self).__init__()
+        super(DNN,self).__init__()
         self.input_dim=input_dim
         self.hidden_dim=hidden_dim
         self.output_dim=output_dim
@@ -58,6 +60,7 @@ class DNN(nn.Module):
         # )
 
     def forward(self,x):
+        x=torch.squeeze(x,1)
         batch_size=x.size(0)
         out=self.layer1(x)
         out=self.layer2(out)
@@ -68,7 +71,7 @@ class DNN(nn.Module):
 class LSTM(nn.Module):
     def __init__(self,input_dim,hidden_dim,output_dim,num_layers,biFlag,da,r,dropout=0.5):
         #dropout
-        super(Net,self).__init__()
+        super(LSTM,self).__init__()
         self.input_dim=input_dim
         self.hidden_dim=hidden_dim
         self.output_dim=output_dim
@@ -138,7 +141,7 @@ class LSTM(nn.Module):
 
 class FUSION(nn.Module):
     def __init__(self,input_dim,output_dim,dropout=0.5):
-        super(Net,self).__init__()
+        super(FUSION,self).__init__()
         self.input_dim=input_dim
         self.output_dim=output_dim
 
@@ -171,7 +174,6 @@ def train(epoch,trainLoader):
         
 #            label=int(torch.squeeze(target[i,0]).item())
         loss=F.nll_loss(output,target,weight=emotionLabelWeight,size_average=False)+penaltyWeight*penalty
-#        numframes+=length[i]
         loss.backward()
         
         weight_loss=0.0;grad_total=0.0;param_num=0
@@ -197,7 +199,7 @@ def train(epoch,trainLoader):
 
 def test(testLoader):
     modelDNN.eval();modelLSTM.eval();modelFUSION.eval()
-    test_loss=0;numframes=0
+    test_loss=0.0
     test_dict1={};test_dict2={}
 
     for data,target,length,name in testLoader:
@@ -217,7 +219,6 @@ def test(testLoader):
             result=torch.squeeze(output[i,:]).cpu().data.numpy()
             test_dict1[name[i]]=result
             test_dict2[name[i]]=target.cpu().data[i]
-            numframes+=length[i]
     if(len(test_dict1)!=len(testLoader.dataset)):
         sys.exit("some test samples are missing")
 
@@ -251,8 +252,8 @@ if __name__=='__main__':
     parser=argparse.ArgumentParser(description='PyTorch for audio emotion classification in iemocap')
     parser.add_argument('--cvnum',type=int,default=1,metavar='N', \
                         help='the num of cv set')
-    parser.add_argument('--batch_size',type=int,default=256,metavar='N', \
-                        help='input batch size for training ( default 64 )')
+    parser.add_argument('--batch_size',type=int,default=32,metavar='N', \
+                        help='input batch size for training ( default 32 )')
     parser.add_argument('--epoch',type=int,default=100,metavar='N', \
                         help='number of epochs to train ( default 100)')
     parser.add_argument('--lr',type=float,default=0.001,metavar='LR', \
@@ -299,7 +300,7 @@ if __name__=='__main__':
     feattype=('npy','csv',)
     normfile=(r'temp1/ms1_{}.npy'.format(args.cvnum),r'temp1/ms2_{}.npy'.format(args.cvnum),)
     longtermFlag=(0,1,)
-    device=torch.device('gpu')
+    device=torch.device('cuda')
     netname=('DNN{}.pkl'.format(args.cvnum),'LSTM{}.pkl'.format(args.cvnum),'FUSION{}.pkl'.format(args.cvnum))
 
     # load dataset
@@ -338,9 +339,9 @@ if __name__=='__main__':
     emotionLabelWeight=[ 1.0/ingredientWeight[k] for k in emotion_labels ]
     emotionLabelWeight=torch.FloatTensor(emotionLabelWeight).to(device)
 
-    modelDNN=DNN(**superParamsDNN);modelLSTM=LSTM(**superParamsLSTM);modelFusion=FUSION(**superParamsFUSION)
-    modelDNN.to(device);modelLSTM.to(device);modelFusion.to(device)
-    optimizer=optim.Adam((*modelDNN.parameters(),*modelLSTM.parameters(),*modelFusion.parameters(),),lr=args.lr,weight_decay=0.0001)
+    modelDNN=DNN(**superParamsDNN);modelLSTM=LSTM(**superParamsLSTM);modelFUSION=FUSION(**superParamsFUSION)
+    modelDNN.to(device);modelLSTM.to(device);modelFUSION.to(device)
+    optimizer=optim.Adam((*modelDNN.parameters(),*modelLSTM.parameters(),*modelFUSION.parameters(),),lr=args.lr,weight_decay=0.0001)
     exp_lr_scheduler = lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.2)
 
     eva_fscore_list=[]
@@ -348,11 +349,11 @@ if __name__=='__main__':
         train(epoch,train_loader)
         eva_acc,eva_fscore=test(eva_loader)
         eva_fscore_list.append(eva_fscore)
-        if(early_stopping((modelDNN,modelLSTM,modelFusion),netname,args.savedir,eva_fscore_list,gap=15)):break
+        if(early_stopping((modelDNN,modelLSTM,modelFUSION),netname,args.savedir,eva_fscore_list,gap=15)):break
 
-        modelDNN=modelDNN.load_state_dict(torch.load(os.path.join(args.savedir,netname[0])))
-        modelLSTM=modelLSTM.load_state_dict(torch.load(os.path.join(args.savedir,netname[1])))
-        modelFusion=modelFusion.load_state_dict(torch.load(os.path.join(args.savedir,netname[2])))
+    modelDNN.load_state_dict(torch.load(os.path.join(args.savedir,netname[0])))
+    modelLSTM.load_state_dict(torch.load(os.path.join(args.savedir,netname[1])))
+    modelFUSION.load_state_dict(torch.load(os.path.join(args.savedir,netname[2])))
     
-    modelDNN.to(device);modelLSTM.to(device);modelFusion.to(device)
+    modelDNN.to(device);modelLSTM.to(device);modelFUSION.to(device)
     test(test_loader)
