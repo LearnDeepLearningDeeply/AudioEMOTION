@@ -80,7 +80,7 @@ class AudioFeatureDataset(Dataset):
                     frames[j]+=temparray.shape[0]
                     self.__mean[j]+=temparray.sum(axis=0)
                     self.__std[j]+=(temparray**2).sum(axis=0)
-            if(self.maxframes[j]<temparray.shape[0] and self.longtermFlag[j]==0):self.maxframes[j]=temparray.shape[0]
+                if(self.maxframes[j]<temparray.shape[0] and self.longtermFlag[j]==0):self.maxframes[j]=temparray.shape[0]
             p.update(i+1)
         for j in range(self.numFeatures):
             self.__mean[j]=self.__mean[j]/frames[j]
