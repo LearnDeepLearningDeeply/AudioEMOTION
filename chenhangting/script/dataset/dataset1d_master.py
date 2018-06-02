@@ -80,7 +80,7 @@ class AudioFeatureDataset(Dataset):
                     frames[j]+=temparray.shape[0]
                     self.__mean[j]+=temparray.sum(axis=0)
                     self.__std[j]+=(temparray**2).sum(axis=0)
-            if(self.maxframes[j]<temparray.shape[0] and self.longtermFlag[j]==0):self.maxframes=temparray.shape[0]
+            if(self.maxframes[j]<temparray.shape[0] and self.longtermFlag[j]==0):self.maxframes[j]=temparray.shape[0]
             p.update(i+1)
         for j in range(self.numFeatures):
             self.__mean[j]=self.__mean[j]/frames[j]
@@ -122,9 +122,9 @@ class AudioFeatureDataset(Dataset):
                 std=np.tile(self.__std[j],(data.shape[0],1))
                 lengthList.append(data.shape[0])
             else:
-                lengthList.append(1)
                 mean=self.__mean[j]
                 std=self.__std[j]
+                lengthList.append(1)
             data=(data-mean)/std
             if(self.longtermFlag[j]==0):data=np.pad(data,((0,self.maxframes[j]-length),(0,0)),'constant')
             dataList.append(torch.FloatTensor(data))
