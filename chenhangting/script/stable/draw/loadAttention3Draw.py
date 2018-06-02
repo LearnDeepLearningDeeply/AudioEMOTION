@@ -18,7 +18,7 @@ from torch.autograd import Variable
 from torch.nn.utils.rnn import pack_padded_sequence,pad_packed_sequence
 import numpy as np
 import sys
-sys.path.append(r'../dataset')
+sys.path.append(r'../../dataset')
 from reverse_seq import reverse_padded_sequence
 from dataset1d_early_stopping_single_label import AudioFeatureDataset
 import pdb
@@ -182,8 +182,8 @@ if __name__=='__main__':
 
     # load dataset
     featrootdir=r'/home/liuzongming/feature_alstm_unnorm'
-    cvtxtrootdir='../../CV/folds'
-    normfile=r'./temp1/ms{}.npy'.format(args.cvnum)
+    cvtxtrootdir='../../../CV/folds'
+    normfile=r'../temp1/ms{}.npy'.format(args.cvnum)
 
     dataset_train=AudioFeatureDataset(featrootdir=featrootdir, \
                                         cvtxtrootdir=cvtxtrootdir,feattype='npy', \

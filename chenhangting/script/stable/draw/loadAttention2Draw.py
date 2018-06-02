@@ -18,7 +18,7 @@ from torch.autograd import Variable
 from torch.nn.utils.rnn import pack_padded_sequence,pad_packed_sequence
 import numpy as np
 import sys
-sys.path.append(r'../dataset')
+sys.path.append(r'../../dataset')
 from reverse_seq import reverse_padded_sequence
 from dataset1d_early_stopping_single_label import AudioFeatureDataset
 import pdb
@@ -103,7 +103,7 @@ class Net(nn.Module):
         out_final=self.layer2(out_final)
 
         penalty=torch.sum(torch.sum(torch.sum(torch.pow(torch.bmm(torch.sqrt(weight),torch.transpose(torch.sqrt(weight),1,2))-oneMat,2.0),0),0),0)
-        return out_final,length,penalty
+        return out_final,length,penalty,weight
 
 	
 def test(testLoader,savefile):
@@ -154,7 +154,7 @@ if __name__=='__main__':
                         help="the device id")
     parser.add_argument('--loadpath',type=str,default='./model.pkl',metavar='S', \
                         help='load the model in the path')
-    parser.add_argument('--savepath',type=str,default='draw/weight/Ses01M_script01_3_M021.npy',metavar='S', \
+    parser.add_argument('--savepath',type=str,default='./weight/Ses01M_script01_3_M021.npy',metavar='S', \
                         help='save atttention weight in the path')
     parser.add_argument('--filename',type=str,default='Ses01M_script01_3_M021.npy',metavar='S', \
                         help='the file to output attention weight')
@@ -180,8 +180,8 @@ if __name__=='__main__':
 
     # load dataset
     featrootdir=r'/home/liuzongming/feature_alstm_unnorm'
-    cvtxtrootdir='../../CV/folds'
-    normfile=r'./temp1/ms{}.npy'.format(args.cvnum)
+    cvtxtrootdir='../../../CV/folds'
+    normfile=r'../temp1/ms{}.npy'.format(args.cvnum)
 
     dataset_train=AudioFeatureDataset(featrootdir=featrootdir, \
                                         cvtxtrootdir=cvtxtrootdir,feattype='npy', \
