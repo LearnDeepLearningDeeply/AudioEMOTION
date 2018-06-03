@@ -118,7 +118,7 @@ class LSTM(nn.Module):
         maxlength=x.size(1)
         hidden=[ self.init_hidden(batch_size) for l in range(self.bi_num)]
         weight=self.init_attention_weight(batch_size,maxlength,self.r)
-        oneMat=Variable(torch.ones(batch_size,self.r,self.r)).cuda()
+        oneMat=Variable(torch.eye(self.r).repeat(batch_size,1,1)).cuda()
 
         out=[x,reverse_padded_sequence(x,length,batch_first=True)]
         for l in range(self.bi_num):
@@ -291,7 +291,7 @@ if __name__=='__main__':
         'output_dim':4,
         'dropout':0.25,
     }
-    penaltyWeight=2e4
+    penaltyWeight=0.0
 
     torch.manual_seed(args.seed);torch.cuda.manual_seed(args.seed);torch.cuda.manual_seed_all(args.seed)
 

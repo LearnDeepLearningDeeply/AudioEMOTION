@@ -66,7 +66,7 @@ superParams={'input_dim':36,
             'r':4,
             'dropout':0.25,
 }
-penaltyWeight=1e5
+penaltyWeight=0.1
 args.cuda=torch.cuda.is_available()
 if(args.cuda==False):sys.exit("GPU is not available")
 torch.manual_seed(args.seed);torch.cuda.manual_seed(args.seed)
@@ -233,7 +233,7 @@ def train(epoch,trainLoader):
 #        weight_loss/=float(param_num);grad_total/=float(param_num)
 
         optimizer.step()
-        print('Train Epoch: {} [{}/{} ({:.0f}%)]\tAve loss: {:.6f} and Total weight loss {:.6f} and penalty {:.6f} and Total grad fro-norm {:.6f}'.format(
+        print('Train Epoch: {} [{}/{} ({:.0f}%)]\tAve loss: {:.2e} and Total weight loss {:.2e} and penalty {:.2e} and Total grad fro-norm {:.2e}'.format(
             epoch, batch_inx * batch_size, len(trainLoader.dataset),
             100. * batch_inx*batch_size / len(trainLoader.dataset), loss.item(),weight_loss,penalty.item(),grad_total))
 
@@ -267,7 +267,7 @@ def test(testLoader):
 #        print(test_dict2[filename])
 #        print(np.argmax(result)==test_dict2[filename])
         label_true.append(test_dict2[filename]);label_pred.append(np.argmax(result))
-    print('\nTest set: Average loss: {:.4f}, Accuracy: {}/{} ({:.4f}%)\n'.format(
+    print('\nTest set: Average loss: {:.4f}, Accuracy: {}/{} ({:.2e}%)\n'.format(
         test_loss, metrics.accuracy_score(label_true,label_pred,normalize=False), \
         len(test_dict1),metrics.accuracy_score(label_true,label_pred)))
     print(metrics.confusion_matrix(label_true,label_pred))

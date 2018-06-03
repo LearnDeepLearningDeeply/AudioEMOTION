@@ -86,7 +86,7 @@ class Net(nn.Module):
         maxlength=x.size(1)
         hidden=[ self.init_hidden(batch_size) for l in range(self.bi_num)]
         weight=self.init_attention_weight(batch_size,maxlength,r)
-        oneMat=Variable(torch.ones(batch_size,r,r)).cuda()
+        oneMat=Variable(torch.eye(r).repeat(batch_size,1,1)).cuda()
 
         out=[x,reverse_padded_sequence(x,length,batch_first=True)]
         for l in range(self.bi_num):
