@@ -27,7 +27,7 @@ lzm的特征，依照文献[1]的描述
 | 2 | LSTM | lzm | frame-wise weighted loss | 53.7 | 57.6 |
 | 3 | attention1 | lzm | segment-based weighted loss | 53.3 | 57.0 |
 | 4 | attention2 | lzm | segment-based weighted loss | 54.3 | 57.6 |
-| 5 | attention3 | lzm | segment-based weighted loss | 55.3 | 58.9 |
+| 5 | attention3 | lzm | segment-based weighted loss | 53.8 | 58.1 |
 | 6 | Advanced-LSTM[1] | Seq(MFCC+others) | segment-based unknown | 46.2 | 55.3 |
 | 7 | dnn[1] | IS10 | segment_based unknown | 56.9 | 58.2 |
 | 8 | Advanced-LSTM+dnn[1] | IS10+Seq | fusion | 58.2 | 58.7 |

@@ -16,6 +16,8 @@ __pycache__/
 # temp script
 parallel*
 serial*
+/script/stable/draw/*
+!/script/stable/draw/plot.py
 
 # CV2
 /script2/
