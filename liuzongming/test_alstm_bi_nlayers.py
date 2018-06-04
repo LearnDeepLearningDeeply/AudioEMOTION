@@ -52,7 +52,7 @@ os.environ["CUDA_VISIBLE_ORDER"]="PCI_BUS_ID"
 os.environ["CUDA_VISIBLE_DEVICES"]=str(args.device_id)
 
 superParams={'input_dim':36,
-             'layer_num':2,
+             'layer_num':1,
 
             'output_dim':4,
             'biFlag':1,
@@ -117,7 +117,7 @@ def sort_batch(data,label,length,name):
 
 
 class Net(nn.Module):
-    def __init__(self,input_dim,output_dim,time_steps,dropout,biFlag,layer_num):
+    def __init__(self,input_dim,output_dim,time_steps,dropout,biFlag,layer_num,da,r):
         #dropout
         super(Net,self).__init__()
         self.input_dim = input_dim
@@ -125,19 +125,26 @@ class Net(nn.Module):
         self.dropout_rate = dropout
         self.time_steps = time_steps
         self.biFlag = biFlag
-        self.input_layer = nn.Linear(self.input_dim,256)
-        self.lstm_cell = nn.LSTMCell(256,128)
+        self.input_layer = nn.Linear(self.input_dim,512)
+
+        self.lstm_cell = nn.LSTMCell(512,256)
+        self.lstm_cell2 = nn.LSTMCell(512,256)
         self.time_w_layer = nn.Linear(self.time_steps,1,bias=False)
+        self.time_w_layer2 = nn.Linear(self.time_steps, 1, bias=False)
         self.dropout_layer = nn.Dropout(self.dropout_rate)
         self.layer_num = layer_num
         #self.w_pool = nn.Linear(hidden_dim*self.bi_num,output_dim)
 
         self.branch_layer = nn.Sequential(
-            nn.Linear(128*(self.biFlag+1),4),
-            nn.LogSoftmax(dim=2)
+            nn.Linear(256*(self.biFlag+1)*r,self.output_dim),
+            nn.LogSoftmax(dim=1)
         )
 
-    def forward(self,x,batch_size,time_steps=3):
+
+    def forward(self,x,batch_size,time_steps,length,r):
+
+        batch_size=x.size(0)
+
 
         output_linear=self.input_layer(x)
 
@@ -147,12 +154,12 @@ class Net(nn.Module):
         for l in range(self.layer_num):
             #print(l)
             output_linear = out
-            h = torch.zeros(batch_size,128).cuda()
-            c = torch.zeros(batch_size,128).cuda()
+            h = torch.zeros(batch_size,256).cuda()
+            c = torch.zeros(batch_size,256).cuda()
 
-            h_steps = torch.zeros(batch_size,128,time_steps).cuda()
-            c_steps = torch.zeros(batch_size,128,time_steps).cuda()
-            out1 = torch.zeros(batch_size,np.shape(output_linear)[1],128).cuda()
+            h_steps = torch.zeros(batch_size,256,time_steps).cuda()
+            c_steps = torch.zeros(batch_size,256,time_steps).cuda()
+            out1 = torch.zeros(batch_size,np.shape(output_linear)[1],256).cuda()
 
             counter = 0
             for i in range(np.shape(output_linear)[1]):
@@ -172,38 +179,38 @@ class Net(nn.Module):
                     #print(np.shape(h))
                     #c = self.time_w_layer(c_steps)[:,:,0]
                     c = torch.squeeze(self.time_w_layer(c_steps))
-                    h_steps = torch.zeros(batch_size,128,time_steps).cuda()
-                    c_steps = torch.zeros(batch_size,128,time_steps).cuda()
+                    h_steps = torch.zeros(batch_size,256,time_steps).cuda()
+                    c_steps = torch.zeros(batch_size,256,time_steps).cuda()
 
                     counter = 0
 
                 out1[:,i,:] = h
             if(self.biFlag):
-                h = torch.zeros(batch_size, 128).cuda()
-                c = torch.zeros(batch_size, 128).cuda()
+                h = torch.zeros(batch_size, 256).cuda()
+                c = torch.zeros(batch_size, 256).cuda()
 
-                h_steps = torch.zeros(batch_size, 128, time_steps).cuda()
-                c_steps = torch.zeros(batch_size, 128, time_steps).cuda()
-                out2 = torch.zeros(batch_size, np.shape(output_linear)[1], 128).cuda()
+                h_steps = torch.zeros(batch_size, 256, time_steps).cuda()
+                c_steps = torch.zeros(batch_size, 256, time_steps).cuda()
+                out2 = torch.zeros(batch_size, np.shape(output_linear)[1], 256).cuda()
 
                 counter = 0
                 for i in range(np.shape(output_linear)[1]):
 
                     input_lstmcell = output_linear[:,(np.shape(output_linear)[1]-i-1), :]
 
-                    h, c = self.lstm_cell(input_lstmcell, (h, c))
+                    h, c = self.lstm_cell2(input_lstmcell, (h, c))
 
                     h_steps[:, :, (i % time_steps)] = h
                     c_steps[:, :, (i % time_steps)] = c
                     counter += 1
                     if (counter == time_steps):
                         # print(np.shape(h_steps))
-                        h = torch.squeeze(self.time_w_layer(h_steps))
+                        h = torch.squeeze(self.time_w_layer2(h_steps))
                         # print(np.shape(h))
                         # c = self.time_w_layer(c_steps)[:,:,0]
-                        c = torch.squeeze(self.time_w_layer(c_steps))
-                        h_steps = torch.zeros(batch_size, 128, time_steps).cuda()
-                        c_steps = torch.zeros(batch_size, 128, time_steps).cuda()
+                        c = torch.squeeze(self.time_w_layer2(c_steps))
+                        h_steps = torch.zeros(batch_size, 256, time_steps).cuda()
+                        c_steps = torch.zeros(batch_size, 256, time_steps).cuda()
 
                         counter = 0
 

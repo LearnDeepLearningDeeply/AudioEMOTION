@@ -1,16 +1,5 @@
 # -*- coding: utf-8 -*-
-"""
-@date: Created on 2018/5/3
-@author: chenhangting
 
-@notes: a attention-lstm  for IEMOCAP
-    support early stopping
-    it is a sccript for pretrain attention lstm
-    the reason to do this is that the directly trained attention-lstm performs very bad
-    it's a stable version with bilstm splited
-    here we use a new attetion described in A STRUCTURED SELF-ATTENTIVE SENTENCE EMBEDDING
-    add penalty for various attention
-"""
 
 import argparse
 import torch
@@ -60,11 +49,11 @@ emotion_labels=('neu','hap','ang','sad')
 superParams={'input_dim':36,
 
             'output_dim':len(emotion_labels),
-            'layer_num':1,
+            'layer_num':1,#Network layer, the current version only supports single layer
             'da':64,
-            'biFlag':1,
+            'biFlag':1,#Network single bi-directional selection, 1 bi-directional and 0 uni - directional
             'r':4,
-            'time_steps':3,
+            'time_steps':3,#Time step of alstm network
             'dropout':0.25,
 }
 penaltyWeight=1.0
@@ -135,8 +124,11 @@ class Net(nn.Module):
         self.time_steps = time_steps
         self.biFlag = biFlag
         self.input_layer = nn.Linear(self.input_dim,256)
+
         self.lstm_cell = nn.LSTMCell(256,128)
+        self.lstm_cell2 = nn.LSTMCell(256,128)
         self.time_w_layer = nn.Linear(self.time_steps,1,bias=False)
+        self.time_w_layer2 = nn.Linear(self.time_steps, 1, bias=False)
         self.dropout_layer = nn.Dropout(self.dropout_rate)
         self.layer_num = layer_num
         #self.w_pool = nn.Linear(hidden_dim*self.bi_num,output_dim)
@@ -216,17 +208,17 @@ class Net(nn.Module):
 
                     input_lstmcell = output_linear[:,(np.shape(output_linear)[1]-i-1), :]
 
-                    h, c = self.lstm_cell(input_lstmcell, (h, c))
+                    h, c = self.lstm_cell2(input_lstmcell, (h, c))
 
                     h_steps[:, :, (i % time_steps)] = h
                     c_steps[:, :, (i % time_steps)] = c
                     counter += 1
                     if (counter == time_steps):
                         # print(np.shape(h_steps))
-                        h = torch.squeeze(self.time_w_layer(h_steps))
+                        h = torch.squeeze(self.time_w_layer2(h_steps))
                         # print(np.shape(h))
                         # c = self.time_w_layer(c_steps)[:,:,0]
-                        c = torch.squeeze(self.time_w_layer(c_steps))
+                        c = torch.squeeze(self.time_w_layer2(c_steps))
                         h_steps = torch.zeros(batch_size, 128, time_steps).cuda()
                         c_steps = torch.zeros(batch_size, 128, time_steps).cuda()
 
@@ -254,7 +246,7 @@ class Net(nn.Module):
 model=Net(**superParams)
 model.cuda()
 optimizer=optim.Adam(filter(lambda p:p.requires_grad,model.parameters()),lr=args.lr,weight_decay=0.0001)
-exp_lr_scheduler = lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.2)
+exp_lr_scheduler = lr_scheduler.StepLR(optimizer, step_size=5, gamma=0.2)
 
 def train(epoch,trainLoader):
     model.train();exp_lr_scheduler.step()
@@ -310,7 +302,7 @@ def test(testLoader):
         data,target=data.cuda(),target.cuda()
         data,target=Variable(data,volatile=True),Variable(target,volatile=True)
         with torch.no_grad():output,penalty=model(data,batch_size,superParams['time_steps'],length,superParams['r'])
-        if torch.sum(torch.isnan(output))!=torch.tensor(0).cuda():
+        if torch.sum(torch.isnan(output))!=torch.tensor(0).cuda():#Prevent network output nan
             print(output)
             print(np.shape(output))
             exit()

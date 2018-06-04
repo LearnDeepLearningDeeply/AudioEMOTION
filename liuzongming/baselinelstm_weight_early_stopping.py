@@ -63,21 +63,25 @@ if(args.cuda==False):sys.exit("GPU is not available")
 torch.manual_seed(args.seed);torch.cuda.manual_seed(args.seed)
 
 # load dataset
-dataset_train=AudioFeatureDataset(featrootdir=r'/home/liuzongming/feature_alstm_unnorm', \
-                                    cvtxtrootdir='/home/liuzongming/AudioEMOTION/chenhangting/CV/folds',feattype='npy', \
+featrootdir=r'/home/liuzongming/feature_alstm_unnorm'
+cvtxtrootdir='/home/liuzongming/AudioEMOTION/chenhangting/CV/folds'
+normfile=r'/home/liuzongming/AudioEMOTION/chenhangting/script/features/ms{}.npy'.format(args.cvnum)
+
+dataset_train=AudioFeatureDataset(featrootdir=featrootdir, \
+                                    cvtxtrootdir=cvtxtrootdir,feattype='npy', \
                                     cvnum=args.cvnum,mode='train',normflag=1,\
-                                    normfile=r'./ms{}.npy'.format(args.cvnum))
+                                    normfile=normfile)
 
-dataset_eva=AudioFeatureDataset(featrootdir=r'/home/liuzongming/feature_alstm_unnorm', \
-                                    cvtxtrootdir='/home/liuzongming/AudioEMOTION/chenhangting/CV/folds',feattype='npy', \
+dataset_eva=AudioFeatureDataset(featrootdir=featrootdir, \
+                                    cvtxtrootdir=cvtxtrootdir,feattype='npy', \
                                     cvnum=args.cvnum,mode='eva',normflag=0,\
-                                    normfile=r'./ms{}.npy'.format(args.cvnum))
+                                    normfile=normfile)
 
 
-dataset_test=AudioFeatureDataset(featrootdir=r'/home/liuzongming/feature_alstm_unnorm', \
-                                    cvtxtrootdir='/home/liuzongming/AudioEMOTION/chenhangting/CV/folds',feattype='npy', \
+dataset_test=AudioFeatureDataset(featrootdir=featrootdir, \
+                                    cvtxtrootdir=cvtxtrootdir,feattype='npy', \
                                     cvnum=args.cvnum,mode='test',normflag=0,\
-                                    normfile=r'./ms{}.npy'.format(args.cvnum))
+                                    normfile=normfile)
 
 
 print("shuffling dataset_train")
